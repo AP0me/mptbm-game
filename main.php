@@ -1,6 +1,27 @@
 <?php
 require_once 'state.php';
 
+class Card {
+    public string $name;
+    public Closure $action;
+    public Closure $conditions;
+
+    public function __construct(string $name, callable $conditions, callable $action) {
+        $this->name = $name;
+        $this->conditions = $conditions(...); 
+        $this->action = $action(...); 
+    }
+
+    public function is_playable(array &$state) {
+        return ($this->conditions)($state);
+    }
+
+    public function play(array &$state) {
+        if (!$this->is_playable($state)) { return; }
+        ($this->action)($state);
+    }
+}
+
 function playable_cards(array $deck, array $state): array {
     $default_card = new Card(
         'skip',

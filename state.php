@@ -1,25 +1,4 @@
 <?php
-class Card {
-    public string $name;
-    public Closure $action;
-    public Closure $conditions;
-
-    public function __construct(string $name, callable $conditions, callable $action) {
-        $this->name = $name;
-        $this->conditions = $conditions(...); 
-        $this->action = $action(...); 
-    }
-
-    public function is_playable(array &$state) {
-        return ($this->conditions)($state);
-    }
-
-    public function play(array &$state) {
-        if (!$this->is_playable($state)) { return; }
-        ($this->action)($state);
-    }
-}
-
 function end_turn(array &$state) {
     $state['acting_player'] = ($state['acting_player'] + 1) % count($state['players']);
 }
