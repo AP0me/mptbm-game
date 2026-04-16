@@ -10,7 +10,6 @@ function end_turn(array &$state) {
 $state = [
     'status' => 'RUNNING',
     'round' => 1,
-    'players' => $players,
     'player_order' => ['anar', 'sun', 'round'],
     'acting_player' => 'anar',
 
@@ -29,7 +28,7 @@ $deck = [
         'Sleep',
         function(&$state) {
             return (
-                current_player($state) === $state['players']['anar'] &&
+                current_player_key($state) === 'anar' &&
                 $state['light_level'] <= 3
             );
         },
@@ -41,7 +40,7 @@ $deck = [
     'day_cycle' => new Card(
         'Day cycle',
         function(&$state) {
-            return current_player($state) === $state['players']['sun'];
+            return current_player_key($state) === 'sun';
         },
         function(&$state) {
             $state['light_level'] = ($state['light_level'] + 3) % 11;
@@ -51,7 +50,7 @@ $deck = [
     'end_of_round' => new Card(
         'End of the round',
         function(&$state) {
-            return current_player($state) === $state['players']['round'];
+            return current_player_key($state) === 'round';
         },
         function(&$state) {
             $state['round']++;

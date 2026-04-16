@@ -1,8 +1,7 @@
 <?php
 
-function current_player(array $state): Player {
-    $acting_player = $state['acting_player'];
-    return $state['players'][$acting_player];
+function current_player_key(array $state): string {
+    return $state['acting_player'];
 }
 
 function robot($string) {

@@ -67,7 +67,7 @@ while ($state["status"] === "RUNNING") {
     $playable_cards = playable_cards($deck, $state);
     print_cards($playable_cards);
     
-    $player = current_player($state);
+    $player = $players[current_player_key($state)];
     $card = choose_card($player, $playable_cards, $state);
     $card->play($state);
 }
