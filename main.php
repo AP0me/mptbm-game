@@ -35,7 +35,8 @@ function playable_cards(array $deck, array $state): array {
 }
 
 function print_state(array $state) {
-    echo "\n## State\n";
+    echo "\e[H\e[J";
+    echo "## State\n";
     foreach ($state as $key => $value) {
         $value = json_encode($value);
         echo "- $key: {$value}\n";
