@@ -22,13 +22,34 @@ function add_health(array &$state, int $add) {
     $state['health'] = $state['health'] > $state['max_health'] ? $state['max_health'] : $state['health'];
 }
 
+function sun_light_level(array &$state) {
+    $timestamp = $state['date_time']; 
+    $lat = 40.4; $long = 49.8;
+    $sun_info = date_sun_info($timestamp, $lat, $long);
+    
+    $sunrise = $sun_info['sunrise'];
+    $sunset = $sun_info['sunset'];
+
+    if ($timestamp > $sunrise && $timestamp < $sunset) {
+        $max_distance_to_horison = abs(($sunrise + $sunset)/2 - $sunrise);
+        $distance_to_horison = min(abs($timestamp - $sunrise), abs($timestamp - $sunset));
+        return round($distance_to_horison / $max_distance_to_horison * 10);
+    } else {
+        return 0;
+    }
+}
+
+function light_level(array &$state) {
+    return sun_light_level($state);
+}
+
 $state = [
     'status' => 'RUNNING',
     'round' => 1,
-    'player_order' => ['anar', 'sun', 'round'],
+    'player_order' => ['anar', 'round'],
     'acting_player' => 'anar',
 
-    'light_level' => 2,
+    'date_time' => time(),
     'max_health' => 100,
     'health' => 100,
     'coin' => 0,
@@ -37,30 +58,32 @@ $state = [
 $deck = [
     'skip' => new Card(
         'Skip turn',
-        function() { return true; },
+        function(&$state) { return true; },
         function(&$state) { end_turn($state); }
+    ),
+    'wait' => new Card(
+        'Wait 1 hour',
+        function(&$state) {
+            return acting_player($state) === 'anar';
+        },
+        function(&$state) {
+            $state['date_time'] = strtotime('+1 hour', $state['date_time']);
+            end_turn($state);
+        }
     ),
     'sleep' => new Card(
         'Sleep',
         function(&$state) {
             return (
                 acting_player($state) === 'anar' &&
-                $state['light_level'] <= 3
+                light_level($state) <= 3
             );
         },
         function(&$state) {
             add_health($state, $state['max_health']);
+            $state['date_time'] = strtotime('+8 hour', $state['date_time']);
             end_turn($state);
-        }
-    ),
-    'day_cycle' => new Card(
-        'Day cycle',
-        function(&$state) {
-            return acting_player($state) === 'sun';
-        },
-        function(&$state) {
-            $state['light_level'] = ($state['light_level'] + 3) % 11;
-            end_turn($state);
+            
         }
     ),
     'end_of_round' => new Card(
