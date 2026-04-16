@@ -49,7 +49,7 @@ $deck = [
             );
         },
         function(&$state) {
-            add_health($state, -60);
+            add_health($state, $state['max_health']);
             end_turn($state);
         }
     ),
