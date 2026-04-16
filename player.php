@@ -1,6 +1,6 @@
 <?php
 
-function current_player_key(array $state): string {
+function acting_player(array $state): string {
     return $state['acting_player'];
 }
 

@@ -28,7 +28,7 @@ $deck = [
         'Sleep',
         function(&$state) {
             return (
-                current_player_key($state) === 'anar' &&
+                acting_player($state) === 'anar' &&
                 $state['light_level'] <= 3
             );
         },
@@ -40,7 +40,7 @@ $deck = [
     'day_cycle' => new Card(
         'Day cycle',
         function(&$state) {
-            return current_player_key($state) === 'sun';
+            return acting_player($state) === 'sun';
         },
         function(&$state) {
             $state['light_level'] = ($state['light_level'] + 3) % 11;
@@ -50,7 +50,7 @@ $deck = [
     'end_of_round' => new Card(
         'End of the round',
         function(&$state) {
-            return current_player_key($state) === 'round';
+            return acting_player($state) === 'round';
         },
         function(&$state) {
             $state['round']++;
