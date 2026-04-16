@@ -27,19 +27,19 @@ class Player {
 $players = [
     'anar' => new Player (
         'Anar',
-        function(&$state) {
+        function($state) use($deck, $players) {
             return trim(fgets(STDIN));
         }
     ),
     'sun' => new Player (
         'The Sun',
-        function(&$state) {
+        function($state) use($deck, $players) {
             return robot('day_cycle');
         }
     ),
     'round' => new Player (
         'Round',
-        function(&$state) {
+        function($state) use($deck, $players) {
             return robot('end_of_round');
         }
     ),
