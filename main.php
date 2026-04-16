@@ -45,13 +45,13 @@ function print_state(array $state) {
 function print_cards($cards) {
     echo "## Playable cards\n";
     foreach ($cards as $index => $card) {
-        echo "$index | $card->name \n";
+        echo "- $card->name ($index)\n";
     }
 }
 
 function choose_card(Player $player, array $playable_cards, array $state): Card {
     while (1) {
-        echo "### Choose a card (number): ";
+        echo "### Choose a card: ";
         $card_key = $player->decide($state);
         if (is_string($card_key) && isset($playable_cards[$card_key])) {
             return $playable_cards[$card_key];
