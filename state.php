@@ -13,13 +13,13 @@ function end_turn(array &$state) {
     $state['acting_player'] = next_player_key($state);
 }
 
-function add_health(array &$state, int $add) {
-    $state['health'] += $add;
-    if ($state['health'] <= 0) {
-        $state['health'] = 0;
+function add_energy(array &$state, int $add) {
+    $state['energy'] += $add;
+    if ($state['energy'] <= 0) {
+        $state['energy'] = 0;
         $state['player_order'] = array_values(array_diff($state['player_order'], ['anar']));
     }
-    $state['health'] = $state['health'] > $state['max_health'] ? $state['max_health'] : $state['health'];
+    $state['energy'] = $state['energy'] > $state['max_energy'] ? $state['max_energy'] : $state['energy'];
 }
 
 function sun_light_level(array &$state) {
@@ -52,8 +52,8 @@ $state = [
     'acting_player' => 'anar',
 
     'date_time' => time(),
-    'max_health' => 100,
-    'health' => 100,
+    'max_energy' => 100,
+    'energy' => 100,
     'coin' => 0,
 ];
 
@@ -73,6 +73,19 @@ $deck = [
             end_turn($state);
         }
     ),
+    'work' => new Card(
+        'Work Shift',
+        function(&$state) {
+            return acting_player($state) === 'anar' && $state['energy'] > 40;
+        },
+        function(&$state) {
+            $multiplier = light_level($state) < 2 ? 1.5 : 1.0;
+            $state['coin'] += 40 * $multiplier;
+            add_energy($state, -40);
+            $state['date_time'] = strtotime('+4 hour', $state['date_time']);
+            end_turn($state);
+        }
+    ),
     'sleep' => new Card(
         'Sleep',
         function(&$state) {
@@ -82,7 +95,7 @@ $deck = [
             );
         },
         function(&$state) {
-            add_health($state, $state['max_health']);
+            add_energy($state, $state['max_energy']);
             $state['date_time'] = strtotime('+8 hour', $state['date_time']);
             end_turn($state);
             
