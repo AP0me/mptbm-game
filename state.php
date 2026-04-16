@@ -31,12 +31,14 @@ function sun_light_level(array &$state) {
     $sunset = $sun_info['sunset'];
 
     if ($timestamp > $sunrise && $timestamp < $sunset) {
-        $max_distance_to_horison = abs(($sunrise + $sunset)/2 - $sunrise);
-        $distance_to_horison = min(abs($timestamp - $sunrise), abs($timestamp - $sunset));
-        return round($distance_to_horison / $max_distance_to_horison * 10);
-    } else {
-        return 0;
-    }
+        $day_length = $sunset - $sunrise;
+        $progress = ($timestamp - $sunrise) / $day_length;
+        $light_level = sin($progress * M_PI);
+
+        return round($light_level * 10);
+    } 
+
+    return 0;
 }
 
 function light_level(array &$state) {
