@@ -1,17 +1,16 @@
 <?php
 function end_turn(array &$state) {
-    $state['acting_player'] = ($state['acting_player'] + 1) % count($state['players']);
-}
-
-function current_player(array &$state) {
-    return $state['players'][$state['acting_player']];
+    $currentIndex = array_search($state['acting_player'], $state['player_order']);
+    $nextIndex = ($currentIndex + 1) % count($state['player_order']);
+    $state['acting_player'] = $state['player_order'][$nextIndex];
 }
 
 $state = [
     'status' => 'RUNNING',
     'round' => 1,
-    'players' => ['Anar', 'The Sun', 'Round'],
-    'acting_player' => 0,
+    'players' => $players,
+    'player_order' => ['anar', 'sun', 'round'],
+    'acting_player' => 'anar',
 
     'light_level' => 2,
     'health' => 100,
@@ -19,16 +18,16 @@ $state = [
 ];
 
 $deck = [
-    new Card(
-        'skip',
+    'skip' => new Card(
+        'Skip turn',
         function() { return true; },
         function(&$state) { end_turn($state); }
     ),
-    new Card(
-        'sleep',
+    'sleep' => new Card(
+        'Sleep',
         function(&$state) {
             return (
-                current_player($state) === 'Anar' &&
+                current_player($state) === $state['players']['anar'] &&
                 $state['light_level'] <= 3
             );
         },
@@ -37,20 +36,20 @@ $deck = [
             end_turn($state);
         }
     ),
-    new Card(
-        'day_cycle',
+    'day_cycle' => new Card(
+        'Day cycle',
         function(&$state) {
-            return current_player($state) === 'The Sun';
+            return current_player($state) === $state['players']['sun'];
         },
         function(&$state) {
             $state['light_level'] = ($state['light_level'] + 3) % 11;
             end_turn($state);
         }
     ),
-    new Card(
-        'end_of_round',
+    'end_of_round' => new Card(
+        'End of the round',
         function(&$state) {
-            return current_player($state) === 'Round';
+            return current_player($state) === $state['players']['round'];
         },
         function(&$state) {
             $state['round']++;
