@@ -73,7 +73,10 @@ $deck = [
     'eat' => new Card(
         'Eat food',
         function(&$state) {
-            return acting_player($state) === 'anar';
+            return (
+                acting_player($state) === 'anar' &&
+                $state['food'] > 0
+            );
         },
         function(&$state) {
             $state['date_time'] = strtotime('+1 hour', $state['date_time']);
