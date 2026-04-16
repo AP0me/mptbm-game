@@ -1,5 +1,4 @@
 <?php
-require_once 'player.php';
 require_once 'state.php';
 
 class Card {

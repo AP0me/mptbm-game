@@ -1,4 +1,6 @@
 <?php
+require_once 'player.php';
+
 function end_turn(array &$state) {
     $currentIndex = array_search($state['acting_player'], $state['player_order']);
     $nextIndex = ($currentIndex + 1) % count($state['player_order']);
