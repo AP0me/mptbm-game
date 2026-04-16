@@ -49,10 +49,9 @@ function print_cards($cards) {
     }
 }
 
-function choose_card(array $playable_cards, array $state): Card {
+function choose_card(Player $player, array $playable_cards, array $state): Card {
     while (1) {
         echo "### Choose a card (number): ";
-        $player = current_player($state);
         $card_key = $player->decide($state);
         if (is_string($card_key) && isset($playable_cards[$card_key])) {
             return $playable_cards[$card_key];
@@ -67,7 +66,9 @@ while ($state["status"] === "RUNNING") {
     print_state($state);
     $playable_cards = playable_cards($deck, $state);
     print_cards($playable_cards);
-    $card = choose_card($playable_cards, $state);
+    
+    $player = current_player($state);
+    $card = choose_card($player, $playable_cards, $state);
     $card->play($state);
 }
 print_state($state);
