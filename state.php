@@ -1,10 +1,25 @@
 <?php
 require_once 'player.php';
 
-function end_turn(array &$state) {
+function next_player_key(array &$state): string {
     $currentIndex = array_search($state['acting_player'], $state['player_order']);
-    $nextIndex = ($currentIndex + 1) % count($state['player_order']);
-    $state['acting_player'] = $state['player_order'][$nextIndex];
+    if ($currentIndex === false) {
+        return $state['player_order'][0];
+    }
+    return $state['player_order'][($currentIndex + 1) % count($state['player_order'])];
+}
+
+function end_turn(array &$state) {
+    $state['acting_player'] = next_player_key($state);
+}
+
+function add_health(array &$state, int $add) {
+    $state['health'] += $add;
+    if ($state['health'] <= 0) {
+        $state['health'] = 0;
+        $state['player_order'] = array_values(array_diff($state['player_order'], ['anar']));
+    }
+    $state['health'] = $state['health'] > $state['max_health'] ? $state['max_health'] : $state['health'];
 }
 
 $state = [
@@ -14,6 +29,7 @@ $state = [
     'acting_player' => 'anar',
 
     'light_level' => 2,
+    'max_health' => 100,
     'health' => 100,
     'coin' => 0,
 ];
@@ -33,7 +49,7 @@ $deck = [
             );
         },
         function(&$state) {
-            $state['health'] += 10;
+            add_health($state, -60);
             end_turn($state);
         }
     ),
