@@ -42,19 +42,14 @@ function print_state(array $state) {
     }
 }
 
-function choose_card(array $playable_cards, array $state): Card {
-    $default_card = new Card(
-        'skip',
-        function() { return true; },
-        function(&$state) { end_turn($state); }
-    );
-    if (empty($playable_cards)) { return $default_card; }
-
+function print_cards($cards) {
     echo "## Playable cards\n";
-    foreach ($playable_cards as $index => $card) {
+    foreach ($cards as $index => $card) {
         echo "$index | $card->name \n";
     }
+}
 
+function choose_card(array $playable_cards, array $state): Card {
     while (1) {
         echo "### Choose a card (number): ";
         $player = current_player($state);
@@ -65,12 +60,13 @@ function choose_card(array $playable_cards, array $state): Card {
         echo "Invalid selection. $card_key\n";
     }
 
-    return $default_card;
+    return $playable_cards['skip'];
 }
 
 while ($state["status"] === "RUNNING") {
     print_state($state);
     $playable_cards = playable_cards($deck, $state);
+    print_cards($playable_cards);
     $card = choose_card($playable_cards, $state);
     $card->play($state);
 }

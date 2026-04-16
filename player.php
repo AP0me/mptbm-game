@@ -5,7 +5,7 @@ function current_player(array $state): Player {
     return $state['players'][$acting_player];
 }
 
-function echo_r($string) {
+function robot($string) {
     echo "$string\n";
     sleep(1);
     return $string;
@@ -35,13 +35,13 @@ $players = [
     'sun' => new Player (
         'The Sun',
         function(&$state) {
-            return echo_r('day_cycle');
+            return robot('day_cycle');
         }
     ),
     'round' => new Player (
         'Round',
         function(&$state) {
-            return echo_r('end_of_round');
+            return robot('end_of_round');
         }
     ),
 ];
