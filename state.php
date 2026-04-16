@@ -22,6 +22,13 @@ function add_energy(array &$state, int $add) {
     $state['energy'] = $state['energy'] > $state['max_energy'] ? $state['max_energy'] : $state['energy'];
 }
 
+function add_food(array &$state, int $add) {
+    $state['food'] += $add;
+    if ($state['food'] < 0) {
+        $state['food'] = 0;
+    }
+}
+
 function sun_light_level(array &$state) {
     $timestamp = $state['date_time']; 
     $lat = 40.4; $long = 49.8;
@@ -54,7 +61,7 @@ $state = [
     'date_time' => time(),
     'max_energy' => 100,
     'energy' => 100,
-    'coin' => 0,
+    'food' => 0,
 ];
 
 $deck = [
@@ -63,6 +70,22 @@ $deck = [
         function(&$state) { return true; },
         function(&$state) { end_turn($state); }
     ),
+    'eat' => new Card(
+        'Eat food',
+        function(&$state) {
+            return acting_player($state) === 'anar';
+        },
+        function(&$state) {
+            $state['date_time'] = strtotime('+1 hour', $state['date_time']);
+            $need_food = 10;
+            add_food($state, -$need_food);
+            if ($state['food'] < $need_food) {
+                $need_food = ($need_food - $state['food']);
+                add_energy($state, 2 * -$need_food);
+            }
+            end_turn($state);
+        }
+    ),
     'wait' => new Card(
         'Wait 1 hour',
         function(&$state) {
@@ -70,17 +93,17 @@ $deck = [
         },
         function(&$state) {
             $state['date_time'] = strtotime('+1 hour', $state['date_time']);
+            add_energy($state, -20);
             end_turn($state);
         }
     ),
-    'work' => new Card(
-        'Work Shift',
+    'hunt' => new Card(
+        'Hunt game',
         function(&$state) {
             return acting_player($state) === 'anar' && $state['energy'] > 40;
         },
         function(&$state) {
-            $multiplier = light_level($state) < 2 ? 1.5 : 1.0;
-            $state['coin'] += 40 * $multiplier;
+            $state['food'] += 40;
             add_energy($state, -40);
             $state['date_time'] = strtotime('+4 hour', $state['date_time']);
             end_turn($state);
@@ -97,6 +120,7 @@ $deck = [
         function(&$state) {
             add_energy($state, $state['max_energy']);
             $state['date_time'] = strtotime('+8 hour', $state['date_time']);
+            $state['food'] -= 10;
             end_turn($state);
             
         }
