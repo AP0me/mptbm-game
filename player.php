@@ -4,7 +4,7 @@ function acting_player(array $state): string {
     return $state['acting_player'];
 }
 
-function robot($string) {
+function robot_input($string) {
     echo "$string\n";
     sleep(1);
     return $string;
@@ -34,13 +34,13 @@ $players = [
     'sun' => new Player (
         'The Sun',
         function($state) use($deck, $players) {
-            return robot('day_cycle');
+            return robot_input('day_cycle');
         }
     ),
     'round' => new Player (
         'Round',
         function($state) use($deck, $players) {
-            return robot('end_of_round');
+            return robot_input('end_of_round');
         }
     ),
 ];
