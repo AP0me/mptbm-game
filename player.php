@@ -33,7 +33,7 @@ $players = [
         }
     ),
     'sun' => new Player (
-            'The Sun',
+        'The Sun',
         function(&$state) {
             return echo_r('day_cycle');
         }
