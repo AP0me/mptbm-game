@@ -89,14 +89,13 @@ $deck = [
     'hunt' => new Card(
         'Hunt game',
         function(&$state) {
-            return acting_player($state) === 'anar' && $state['energy'] > 35;
+            return acting_player($state) === 'anar' && $state['energy'] > 30;
         },
         function(&$state) {
-            $light = sun_light_level($state);
+            $light = light_level($state);
             $state['date_time'] = date('Y-m-d H:i:s', strtotime('+4 hours', date_time_stamp($state)));
             $yield = ($light >= 4) ? 25 : 5; 
             add_food($state, $yield);
-            
             add_energy($state, -35);
             end_turn($state);
         }
