@@ -29,8 +29,12 @@ function add_food(array &$state, int $add) {
     }
 }
 
+function date_time_stamp(array $state) {
+    return strtotime($state['date_time']);
+}
+
 function sun_light_level(array &$state) {
-    $timestamp = $state['date_time']; 
+    $timestamp = date_time_stamp($state); 
     $lat = 40.4; $long = 49.8;
     $sun_info = date_sun_info($timestamp, $lat, $long);
     
@@ -58,7 +62,7 @@ $state = [
     'player_order' => ['anar', 'round'],
     'acting_player' => 'anar',
 
-    'date_time' => time(),
+    'date_time' => date('Y-m-d H:i:s'),
     'max_energy' => 100,
     'energy' => 100,
     'food' => 0,
@@ -73,42 +77,27 @@ $deck = [
     'eat' => new Card(
         'Eat food',
         function(&$state) {
-            return (
-                acting_player($state) === 'anar' &&
-                $state['food'] > 0
-            );
+            return acting_player($state) === 'anar' && $state['food'] > 0;
         },
         function(&$state) {
-            $state['date_time'] = strtotime('+1 hour', $state['date_time']);
-            $need_food = 10;
-            add_food($state, -$need_food);
-            if ($state['food'] < $need_food) {
-                $need_food = ($need_food - $state['food']);
-                add_energy($state, 2 * -$need_food);
-            }
-            end_turn($state);
-        }
-    ),
-    'wait' => new Card(
-        'Wait 1 hour',
-        function(&$state) {
-            return acting_player($state) === 'anar';
-        },
-        function(&$state) {
-            $state['date_time'] = strtotime('+1 hour', $state['date_time']);
-            add_energy($state, -20);
+            $state['date_time'] = date('Y-m-d H:i:s', strtotime('+30 minutes', date_time_stamp($state)));
+            add_energy($state, 5);
+            add_food($state, -15);
             end_turn($state);
         }
     ),
     'hunt' => new Card(
         'Hunt game',
         function(&$state) {
-            return acting_player($state) === 'anar' && $state['energy'] > 40;
+            return acting_player($state) === 'anar' && $state['energy'] > 35;
         },
         function(&$state) {
-            $state['food'] += 40;
-            add_energy($state, -40);
-            $state['date_time'] = strtotime('+4 hour', $state['date_time']);
+            $light = sun_light_level($state);
+            $state['date_time'] = date('Y-m-d H:i:s', strtotime('+4 hours', date_time_stamp($state)));
+            $yield = ($light >= 4) ? 25 : 5; 
+            add_food($state, $yield);
+            
+            add_energy($state, -35);
             end_turn($state);
         }
     ),
@@ -121,11 +110,25 @@ $deck = [
             );
         },
         function(&$state) {
-            add_energy($state, $state['max_energy']);
-            $state['date_time'] = strtotime('+8 hour', $state['date_time']);
-            $state['food'] -= 10;
+            $state['date_time'] = date('Y-m-d H:i:s', strtotime('+8 hours', date_time_stamp($state)));
+            if ($state['food'] >= 10) {
+                add_energy($state, 60);
+                add_food($state, -10);
+            } else {
+                add_energy($state, 10);
+                add_food($state, -$state['food']);
+            }
             end_turn($state);
-            
+        }
+    ),
+    'wait' => new Card(
+        'Wait 1 hour',
+        function(&$state) { return acting_player($state) === 'anar'; },
+        function(&$state) {
+            $state['date_time'] = date('Y-m-d H:i:s', strtotime('+1 hour', date_time_stamp($state)));
+            add_energy($state, -10);
+            add_food($state, -2);
+            end_turn($state);
         }
     ),
     'end_of_round' => new Card(

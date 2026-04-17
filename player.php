@@ -31,12 +31,6 @@ $players = [
             return trim(fgets(STDIN));
         }
     ),
-    'sun' => new Player (
-        'The Sun',
-        function($state) use($deck, $players) {
-            return robot_input('day_cycle');
-        }
-    ),
     'round' => new Player (
         'Round',
         function($state) use($deck, $players) {
