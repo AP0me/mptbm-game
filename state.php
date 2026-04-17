@@ -74,6 +74,8 @@ function time_passes($minutes, array &$state) {
             unset($state['fire_minutes']);
         }
     }
+
+    add_energy($state, round(-10 * ($minutes / 60)));
 }
 
 $state = [
@@ -100,9 +102,9 @@ $deck = [
             return acting_player($state) === 'anar' && $state['food'] > 0;
         },
         function(&$state) {
-            time_passes(30, $state);
-            add_energy($state, ($state['fire_minutes'] ?? 0) > 0 ? 10 : 5);
+            add_energy($state, ($state['fire_minutes'] ?? 0) > 0 ? 40 : 20);
             add_food($state, -15);
+            time_passes(30, $state);
             end_turn($state);
         }
     ),
@@ -113,10 +115,10 @@ $deck = [
         },
         function(&$state) {
             $light = sun_light_level($state);
-            time_passes(4 * 60, $state);
             $yield = ($light >= 0) ? 25 : 5; 
             add_food($state, $yield);
-            add_energy($state, -35);
+            add_energy($state, -10);
+            time_passes(2 * 60, $state);
             end_turn($state);
         }
     ),
@@ -129,9 +131,9 @@ $deck = [
             );
         },
         function(&$state) {
-            time_passes(60, $state);
-            add_energy($state, -15);
+            add_energy($state, -5);
             $state['wood'] += light_level($state) > 3 ? 5 : 1;
+            time_passes(60, $state);
             end_turn($state);
         }
     ),
@@ -145,16 +147,16 @@ $deck = [
             );
         },
         function(&$state) {
-            time_passes(60, $state);
             if (!isset($state['fire_minutes'])) {
                 $state['fire_minutes'] = 0;
             }
             if (!($state['fire_minutes'] > 0)) {
-                add_energy($state, -55);
+                add_energy($state, -45);
             }
 
             $state['fire_minutes'] += ($state['wood'] ?? 0) * 60;
             $state['wood'] = max(0, ($state['wood'] ?? 0) - 10);
+            time_passes(60, $state);
             end_turn($state);
         }
     ),
@@ -167,16 +169,9 @@ $deck = [
             );
         },
         function(&$state) {
-            time_passes(8 * 60, $state);
             $fire_bonus = ($state['fire_minutes'] ?? 0) > 0 ? 10 : 0;
-            if ($state['food'] >= 10) {
-                add_energy($state, 60 + $fire_bonus);
-                add_food($state, -10);
-            }
-            else {
-                add_energy($state, 10 + $fire_bonus);
-                add_food($state, -$state['food']);
-            }
+            add_energy($state, 70 + $fire_bonus);
+            time_passes(8 * 60, $state);
             end_turn($state);
         }
     ),
@@ -185,8 +180,6 @@ $deck = [
         function(&$state) { return acting_player($state) === 'anar'; },
         function(&$state) {
             time_passes(60, $state);
-            add_energy($state, -10);
-            add_food($state, -2);
             end_turn($state);
         }
     ),
