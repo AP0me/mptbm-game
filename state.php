@@ -85,8 +85,8 @@ $state = [
     'acting_player' => 'anar',
 
     'date_time' => date('Y-m-d H:i:s'),
-    'max_energy' => 100,
-    'energy' => 100,
+    'max_energy' => 10000,
+    'energy' => 10000,
     'food' => 0,
 ];
 
@@ -132,7 +132,7 @@ $deck = [
         },
         function(&$state) {
             add_energy($state, -5);
-            $state['wood'] += light_level($state) > 3 ? 5 : 1;
+            $state['wood'] += light_level($state) > 3 ? 5 : 3;
             time_passes(60, $state);
             end_turn($state);
         }
