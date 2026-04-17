@@ -68,10 +68,6 @@ function time_passes($minutes, array $state): string {
     return date('Y-m-d H:i:s', strtotime("+$minutes minutes", date_time_stamp($state)));
 }
 
-function ($value, $default)  ??
-    isset($value) ? $value : $default;
-}
-
 $state = [
     'status' => 'RUNNING',
     'round' => 1,
@@ -110,7 +106,7 @@ $deck = [
         function(&$state) {
             $light = sun_light_level($state);
             $state['date_time'] = time_passes(4 * 60, $state);
-            $yield = ($light >= 4) ? 25 : 5; 
+            $yield = ($light >= 0) ? 25 : 5; 
             add_food($state, $yield);
             add_energy($state, -35);
             end_turn($state);
