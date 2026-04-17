@@ -26,6 +26,7 @@ function add_energy(array &$state, int $add) {
     if ($state['energy'] <= 0) {
         $state['energy'] = 0;
         remove_players($state, ['anar']);
+        $state['status'] = 'LOST';
     }
     $state['energy'] = $state['energy'] > $state['max_energy'] ? $state['max_energy'] : $state['energy'];
 }
@@ -82,8 +83,8 @@ $state = [
     'acting_player' => 'anar',
 
     'date_time' => date('Y-m-d H:i:s'),
-    'max_energy' => 10000,
-    'energy' => 10000,
+    'max_energy' => 100,
+    'energy' => 100,
     'food' => 0,
 ];
 
