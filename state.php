@@ -85,7 +85,7 @@ $deck = [
         },
         function(&$state) {
             $state['date_time'] = time_passes(30, $state);
-            add_energy($state, 5);
+            add_energy($state, $state['fire'] > 0 ? 10 : 5);
             add_food($state, -15);
             end_turn($state);
         }
@@ -96,11 +96,58 @@ $deck = [
             return acting_player($state) === 'anar' && $state['energy'] > 30;
         },
         function(&$state) {
-            $light = light_level($state);
+            $light = sun_light_level($state);
             $state['date_time'] = time_passes(4 * 60, $state);
             $yield = ($light >= 4) ? 25 : 5; 
             add_food($state, $yield);
             add_energy($state, -35);
+            end_turn($state);
+        }
+    ),
+    'wood' => new Card(
+        'Collect wood',
+        function(&$state) {
+            return (
+                acting_player($state) === 'anar' &&
+                $state['energy'] > 10
+            );
+        },
+        function(&$state) {
+            $state['date_time'] = time_passes(60, $state);
+            add_energy($state, -15);
+            $state['wood'] += light_level($state) > 3 ? 10 : 5;
+            end_turn($state);
+        }
+    ),
+    'fire' => new Card(
+        'Make fire',
+        function(&$state) {
+            return (
+                acting_player($state) === 'anar' &&
+                ($state['energy'] > 50 || ((int)$state['fire'] > 0)) &&
+                $state['wood'] > 0
+            );
+        },
+        function(&$state) {
+            $state['date_time'] = time_passes(60, $state);
+            if (!((int)$state['fire'] > 0)) {
+                add_energy($state, -55);
+            }
+            $state['fire'] += min($state['wood'], 10);
+            $state['wood'] = max(0, $state['wood'] - 10);
+            array_splice($state['player_order'], 0, 0, 'fire');
+            end_turn($state);
+        }
+    ),
+    'fire_burns' => new Card(
+        'Fire burns',
+        function(&$state) {
+            return (
+                acting_player($state) === 'fire'
+            );
+        },
+        function(&$state) {
+            $state['fire'] = max(0, $state['fire'] - 1);
             end_turn($state);
         }
     ),
@@ -109,16 +156,18 @@ $deck = [
         function(&$state) {
             return (
                 acting_player($state) === 'anar' &&
-                light_level($state) <= 0
+                sun_light_level($state) <= 0
             );
         },
         function(&$state) {
             $state['date_time'] = time_passes(8 * 60, $state);
+            $fire_bonus = $state['fire'] > 0 ? 10 : 0;
             if ($state['food'] >= 10) {
-                add_energy($state, 60);
+                add_energy($state, 60 + $fire_bonus);
                 add_food($state, -10);
-            } else {
-                add_energy($state, 10);
+            }
+            else {
+                add_energy($state, 10 + $fire_bonus);
                 add_food($state, -$state['food']);
             }
             end_turn($state);
