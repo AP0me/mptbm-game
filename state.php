@@ -68,6 +68,10 @@ function time_passes($minutes, array $state): string {
     return date('Y-m-d H:i:s', strtotime("+$minutes minutes", date_time_stamp($state)));
 }
 
+function dfolt($value, $default) {
+    isset($value) ? $value : $default;
+}
+
 $state = [
     'status' => 'RUNNING',
     'round' => 1,
@@ -75,8 +79,8 @@ $state = [
     'acting_player' => 'anar',
 
     'date_time' => date('Y-m-d H:i:s'),
-    'max_energy' => 10000,
-    'energy' => 10000,
+    'max_energy' => 100,
+    'energy' => 100,
     'food' => 0,
 ];
 
@@ -93,7 +97,7 @@ $deck = [
         },
         function(&$state) {
             $state['date_time'] = time_passes(30, $state);
-            add_energy($state, $state['fire'] > 0 ? 10 : 5);
+            add_energy($state, dfolt($state['fire'], 0) > 0 ? 10 : 5);
             add_food($state, -15);
             end_turn($state);
         }
@@ -132,17 +136,17 @@ $deck = [
         function(&$state) {
             return (
                 acting_player($state) === 'anar' &&
-                ($state['energy'] > 50 || ((int)$state['fire'] > 0)) &&
-                $state['wood'] > 0
+                ($state['energy'] > 50 || dfolt($state['fire'], 0) > 0) &&
+                dfolt($state['wood'], 0) > 0
             );
         },
         function(&$state) {
             $state['date_time'] = time_passes(60, $state);
-            if (!((int)$state['fire'] > 0)) {
+            if (!dfolt($state['fire'], 0) > 0) {
                 add_energy($state, -55);
             }
-            $state['fire'] += min($state['wood'], 10);
-            $state['wood'] = max(0, $state['wood'] - 10);
+            $state['fire'] += min(dfolt($state['wood'], 0), 10);
+            $state['wood'] = max(0, dfolt($state['wood'], 0) - 10);
             add_players($state, ['fire']);
             end_turn($state);
         }
@@ -155,8 +159,8 @@ $deck = [
             );
         },
         function(&$state) {
-            $state['fire'] = max(0, $state['fire'] - 1);
-            if ($state['fire'] <= 0) {
+            $state['fire'] = max(0, dfolt($state['fire'], 0) - 1);
+            if (dfolt($state['fire'], 0) <= 0) {
                 remove_players($state, ['fire']);
             }
             end_turn($state);
@@ -172,7 +176,7 @@ $deck = [
         },
         function(&$state) {
             $state['date_time'] = time_passes(8 * 60, $state);
-            $fire_bonus = $state['fire'] > 0 ? 10 : 0;
+            $fire_bonus = dfolt($state['fire'], 0) > 0 ? 10 : 0;
             if ($state['food'] >= 10) {
                 add_energy($state, 60 + $fire_bonus);
                 add_food($state, -10);
