@@ -31,12 +31,6 @@ $players = [
             return trim(fgets(STDIN));
         }
     ),
-    'fire' => new Player (
-        'Fire',
-        function($state) use($deck, $players) {
-            return robot_input('fire_burns');
-        }
-    ),
     'round' => new Player (
         'Round',
         function($state) use($deck, $players) {
