@@ -85,8 +85,8 @@ $state = [
     'acting_player' => 'anar',
 
     'date_time' => date('Y-m-d H:i:s'),
-    'max_energy' => 10000,
-    'energy' => 10000,
+    'max_energy' => 100,
+    'energy' => 100,
     'food' => 0,
 ];
 
