@@ -9,6 +9,14 @@ function next_player_key(array &$state): string {
     return $state['player_order'][($currentIndex + 1) % count($state['player_order'])];
 }
 
+function remove_players(array &$state, array $player_keys) {
+    $state['player_order'] = array_values(array_diff($state['player_order'], $player_keys));
+}
+
+function add_players(array &$state, array $player_keys) {
+    $state['player_order'] = array_merge($player_keys, $state['player_order']);
+}
+
 function end_turn(array &$state) {
     $state['acting_player'] = next_player_key($state);
 }
@@ -17,7 +25,7 @@ function add_energy(array &$state, int $add) {
     $state['energy'] += $add;
     if ($state['energy'] <= 0) {
         $state['energy'] = 0;
-        $state['player_order'] = array_values(array_diff($state['player_order'], ['anar']));
+        remove_players($state, ['anar']);
     }
     $state['energy'] = $state['energy'] > $state['max_energy'] ? $state['max_energy'] : $state['energy'];
 }
@@ -135,7 +143,7 @@ $deck = [
             }
             $state['fire'] += min($state['wood'], 10);
             $state['wood'] = max(0, $state['wood'] - 10);
-            array_splice($state['player_order'], 0, 0, 'fire');
+            add_players($state, ['fire']);
             end_turn($state);
         }
     ),
@@ -148,6 +156,9 @@ $deck = [
         },
         function(&$state) {
             $state['fire'] = max(0, $state['fire'] - 1);
+            if ($state['fire'] <= 0) {
+                remove_players($state, ['fire']);
+            }
             end_turn($state);
         }
     ),
