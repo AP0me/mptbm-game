@@ -179,8 +179,8 @@ $deck = [
         },
         function(&$state) {
             $fire_bonus = ($state['fire_minutes'] ?? 0) > 0 ? 10 : 0;
-            time_passes(8 * 60, $state);
             add_energy($state, 70 + $fire_bonus);
+            time_passes(8 * 60, $state);
         }
     ),
     'wait' => new Card(
