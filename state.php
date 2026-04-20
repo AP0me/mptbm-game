@@ -62,12 +62,25 @@ function sun_light_level(array &$state) {
 }
 
 function light_level(array &$state) {
-    return sun_light_level($state);
+    $sun_light_level = sun_light_level($state);
+    $fire_light_level = 0;
+    if ($state['fire_minutes'] ?? 0) {
+        $fire_light_level + 4;
+    }
+    return $sun_light_level + $fire_light_level;
 }
 
 function time_passes($minutes, array &$state) {
     $state['date_time'] = date('Y-m-d H:i:s', strtotime("+$minutes minutes", date_time_stamp($state)));
     
+    $state['minutes_left_per_player'] = max($state['minutes_left_per_player'] - $minutes, 0);
+    if ($state['minutes_left_per_player'] === 0) {
+        end_turn($state);
+        $state['minutes_left_per_player'] = 60 * 24;
+        $day_minutes = 60 * 24;
+        $state['date_time'] = date('Y-m-d 00:00:00', date_time_stamp($state));
+    }
+
     if (isset($state['fire_minutes'])) {
         $state['fire_minutes'] = max($state['fire_minutes'] - $minutes, 0);
         if ($state['fire_minutes'] === 0) {
@@ -84,7 +97,8 @@ $state = [
     'player_order' => ['anar', 'round'],
     'acting_player' => 'anar',
 
-    'date_time' => date('Y-m-d H:i:s'),
+    'date_time' => date('Y-m-d 00:00:00'),
+    'minutes_left_per_player' => 60 * 24,
     'max_energy' => 100,
     'energy' => 100,
     'food' => 0,
@@ -102,10 +116,9 @@ $deck = [
             return acting_player($state) === 'anar' && $state['food'] > 0;
         },
         function(&$state) {
-            add_energy($state, ($state['fire_minutes'] ?? 0) > 0 ? 40 : 20);
+            add_energy($state, ($state['fire_minutes'] ?? 0) > 0 ? 50 : 20);
             add_food($state, -15);
             time_passes(30, $state);
-            end_turn($state);
         }
     ),
     'hunt' => new Card(
@@ -119,7 +132,6 @@ $deck = [
             add_food($state, $yield);
             add_energy($state, -10);
             time_passes(2 * 60, $state);
-            end_turn($state);
         }
     ),
     'wood' => new Card(
@@ -134,7 +146,6 @@ $deck = [
             add_energy($state, -5);
             $state['wood'] += light_level($state) > 3 ? 5 : 3;
             time_passes(60, $state);
-            end_turn($state);
         }
     ),
     'fire' => new Card(
@@ -157,7 +168,6 @@ $deck = [
             $state['fire_minutes'] += ($state['wood'] ?? 0) * 60;
             $state['wood'] = max(0, ($state['wood'] ?? 0) - 10);
             time_passes(60, $state);
-            end_turn($state);
         }
     ),
     'sleep' => new Card(
@@ -170,9 +180,8 @@ $deck = [
         },
         function(&$state) {
             $fire_bonus = ($state['fire_minutes'] ?? 0) > 0 ? 10 : 0;
-            add_energy($state, 70 + $fire_bonus);
             time_passes(8 * 60, $state);
-            end_turn($state);
+            add_energy($state, 70 + $fire_bonus);
         }
     ),
     'wait' => new Card(
@@ -180,7 +189,6 @@ $deck = [
         function(&$state) { return acting_player($state) === 'anar'; },
         function(&$state) {
             time_passes(60, $state);
-            end_turn($state);
         }
     ),
     'end_of_round' => new Card(
