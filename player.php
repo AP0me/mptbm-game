@@ -27,13 +27,13 @@ class Player {
 $players = [
     'anar' => new Player (
         'Anar',
-        function($state) use($deck, $players) {
+        function(&$state) use(&$deck, &$players) {
             return trim(fgets(STDIN));
         }
     ),
     'round' => new Player (
         'Round',
-        function($state) use($deck, $players) {
+        function(&$state) use(&$deck, &$players) {
             return robot_input('end_of_round');
         }
     ),

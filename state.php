@@ -77,7 +77,6 @@ function time_passes($minutes, array &$state) {
     if ($state['minutes_left_per_player'] === 0) {
         end_turn($state);
         $state['minutes_left_per_player'] = 60 * 24;
-        $day_minutes = 60 * 24;
         $state['date_time'] = date('Y-m-d 00:00:00', date_time_stamp($state));
     }
 
@@ -106,12 +105,12 @@ $state = [
 
 $deck = [
     'skip' => new Card(
-        'Skip turn',
+        'Skip your turn',
         function(&$state) { return true; },
         function(&$state) { end_turn($state); }
     ),
     'eat' => new Card(
-        'Eat food',
+        'Eat 10 food',
         function(&$state) {
             return acting_player($state) === 'anar' && $state['food'] > 0;
         },
@@ -139,7 +138,7 @@ $deck = [
         function(&$state) {
             return (
                 acting_player($state) === 'anar' &&
-                $state['energy'] > 10
+                $state['energy'] > 5
             );
         },
         function(&$state) {
@@ -149,11 +148,11 @@ $deck = [
         }
     ),
     'fire' => new Card(
-        'Make fire',
+        'Make fire with 10 wood',
         function(&$state) {
             return (
                 acting_player($state) === 'anar' &&
-                ($state['energy'] > 50 || ($state['fire_minutes'] ?? 0) > 0) &&
+                ($state['energy'] > 45 || ($state['fire_minutes'] ?? 0) > 0) &&
                 ($state['wood'] ?? 0) > 0
             );
         },
@@ -171,7 +170,7 @@ $deck = [
         }
     ),
     'sleep' => new Card(
-        'Sleep',
+        'Sleep 8 hours',
         function(&$state) {
             return (
                 acting_player($state) === 'anar' &&
