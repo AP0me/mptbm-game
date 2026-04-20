@@ -51,7 +51,7 @@ function print_state(array $state) {
     $box_width = 60;
     
     echo "{$cyan}{$bold}╔" . str_repeat("═", $box_width) . "╗{$reset}\n";
-    echo "{$bold}{$cyan}║" . center_text("🃏 CARD GAME STATE 🃏", $box_width) . "║{$reset}\n";
+    echo "{$bold}{$cyan}║" . center_text("~ GAME STATE ~", $box_width) . "║{$reset}\n";
     echo "{$cyan}{$bold}╠" . str_repeat("═", $box_width) . "╣{$reset}\n";
 
     foreach ($state as $key => $value) {
@@ -71,7 +71,7 @@ function print_state(array $state) {
         echo "{$cyan}{$bold}║{$reset} {$key_part}{$val_part}" . str_repeat(" ", $padding+1) . "{$cyan}{$bold}║{$reset}\n";
     }
 
-    echo "{$cyan}{$bold}╚" . str_repeat("═", $box_width) . "╝{$reset}\n\n";
+    echo "{$cyan}{$bold}╚" . str_repeat("═", $box_width) . "╝{$reset}";
 }
 
 function print_cards($cards) {
@@ -87,7 +87,7 @@ function print_cards($cards) {
     $box_width = 44;
     
     echo "\n{$magenta}{$bold}╔" . str_repeat("═", $box_width) . "╗{$reset}\n";
-    echo "{$bold}{$magenta}║" . center_text("🎴 PLAYABLE CARDS 🎴", $box_width) . "║{$reset}\n";
+    echo "{$bold}{$magenta}║" . center_text("~ PLAYABLE CARDS ~", $box_width) . "║{$reset}\n";
     echo "{$magenta}{$bold}╠" . str_repeat("═", $box_width) . "╣{$reset}\n";
 
     foreach ($cards as $card_key => $card) {
