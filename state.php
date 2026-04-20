@@ -87,7 +87,11 @@ function time_passes($minutes, array &$state) {
         }
     }
 
-    add_energy($state, round(-10 * ($minutes / 60)));
+    $energy_spent = round(-10 * ($minutes / 60));
+    if ((bool)$state['sleeping']) {
+        $energy_spent = round(-2 * ($minutes / 60));
+    }
+    add_energy($state, $energy_spent);
 }
 
 $state = [
@@ -127,10 +131,10 @@ $deck = [
         },
         function(&$state) {
             $light = sun_light_level($state);
-            $yield = ($light >= 0) ? 25 : 5; 
+            $yield = ($light >= 0) ? 12 : 3;
             add_food($state, $yield);
             add_energy($state, -10);
-            time_passes(2 * 60, $state);
+            time_passes(60, $state);
         }
     ),
     'wood' => new Card(
@@ -164,7 +168,7 @@ $deck = [
                 add_energy($state, -45);
             }
 
-            $state['fire_minutes'] += ($state['wood'] ?? 0) * 60;
+            $state['fire_minutes'] += round(($state['wood'] ?? 0) * 60 * 1.5);
             $state['wood'] = max(0, ($state['wood'] ?? 0) - 10);
             time_passes(60, $state);
         }
@@ -178,9 +182,14 @@ $deck = [
             );
         },
         function(&$state) {
-            $fire_bonus = ($state['fire_minutes'] ?? 0) > 0 ? 10 : 0;
-            add_energy($state, 70 + $fire_bonus);
-            time_passes(8 * 60, $state);
+            $state['sleeping'] = true;
+            $fire_bonus = 0;
+            if (($state['fire_minutes'] ?? 0) > 0) {
+                $fire_bonus = 10;
+                time_passes(8 * 60, $state);
+            }
+            add_energy($state, $fire_bonus);
+            unset($state['sleeping']);
         }
     ),
     'wait' => new Card(

@@ -37,7 +37,7 @@ function playable_cards(array $deck, array $state): array {
 function print_state(array $state) {
     // ANSI clear screen and home
     echo "\e[H\e[J";
-    echo "\033[2J\033[H";
+    // echo "\033[2J\033[H";
 
     // Colors (inline for simplicity)
     $bold = "\033[1m";
