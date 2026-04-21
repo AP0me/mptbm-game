@@ -88,7 +88,7 @@ function time_passes($minutes, array &$state) {
     }
 
     $energy_spent = round(-10 * ($minutes / 60));
-    if ((bool)$state['sleeping']) {
+    if ($state['sleeping'] ?? false) {
         $energy_spent = round(-2 * ($minutes / 60));
     }
     add_energy($state, $energy_spent);
@@ -109,9 +109,12 @@ $state = [
 
 $deck = [
     'skip' => new Card(
-        'Skip your turn',
-        function(&$state) { return true; },
-        function(&$state) { end_turn($state); }
+        'skip',
+        function() { return true; },
+        function(&$state) {
+            end_turn($state);
+            return "Let's see what else is happening.";
+        }
     ),
     'eat' => new Card(
         'Eat 10 food',
@@ -119,9 +122,12 @@ $deck = [
             return acting_player($state) === 'anar' && $state['food'] > 0;
         },
         function(&$state) {
-            add_energy($state, ($state['fire_minutes'] ?? 0) > 0 ? 50 : 20);
+            $cooked = ($state['fire_minutes'] ?? 0) > 0 ? 50 : 20;
+            add_energy($state, $cooked);
             add_food($state, -15);
             time_passes(30, $state);
+            
+            return $cooked ? "The player stopped to eat a cooked meal." : "The player stopped to eat raw food.";
         }
     ),
     'hunt' => new Card(
@@ -131,10 +137,12 @@ $deck = [
         },
         function(&$state) {
             $light = sun_light_level($state);
-            $yield = ($light >= 0) ? 12 : 3;
+            $is_day = ($light > 0);
+            $yield = $is_day ? 12 : 3;
             add_food($state, $yield);
             add_energy($state, -10);
             time_passes(60, $state);
+            return $is_day ? "The daytime hunt highly productive." : "Hunting at night was difficult.";
         }
     ),
     'wood' => new Card(
@@ -147,8 +155,14 @@ $deck = [
         },
         function(&$state) {
             add_energy($state, -5);
-            $state['wood'] += light_level($state) > 3 ? 5 : 3;
+            $has_light = light_level($state) > 3;
+            $state['wood'] = $state['wood'] ?? 0; 
+            $state['wood'] += $has_light ? 5 : 3;
             time_passes(60, $state);
+
+            return $has_light ?
+            "The player foraged for wood." :
+            "The player foraged for wood. The lack of visibility made it challenging.";
         }
     ),
     'fire' => new Card(
@@ -164,13 +178,21 @@ $deck = [
             if (!isset($state['fire_minutes'])) {
                 $state['fire_minutes'] = 0;
             }
+
+            $from_scratch = false;
             if (!($state['fire_minutes'] > 0)) {
+                $from_scratch = true;
                 add_energy($state, -45);
+                time_passes(60, $state);
             }
 
+            $state['fire_minutes'] = $state['fire_minutes'] ?? 0;
             $state['fire_minutes'] += round(($state['wood'] ?? 0) * 60 * 1.5);
             $state['wood'] = max(0, ($state['wood'] ?? 0) - 10);
-            time_passes(60, $state);
+
+            return $from_scratch ? 
+            "The player rubs sticks together to make fire. It was exhausting and time consuming." : 
+            "The player stokes the fire with more wood.";
         }
     ),
     'sleep' => new Card(
@@ -183,13 +205,18 @@ $deck = [
         },
         function(&$state) {
             $state['sleeping'] = true;
+            $has_fire = ($state['fire_minutes'] ?? 0) > 0;
             $fire_bonus = 0;
-            if (($state['fire_minutes'] ?? 0) > 0) {
+            if ($has_fire) {
                 $fire_bonus = 10;
                 time_passes(8 * 60, $state);
             }
             add_energy($state, $fire_bonus);
             unset($state['sleeping']);
+
+            return $has_fire ? 
+            "The player slept for 8 hours in warmth." :
+            "The player slept for 8 hours in the cold.";
         }
     ),
     'wait' => new Card(
@@ -197,6 +224,7 @@ $deck = [
         function(&$state) { return acting_player($state) === 'anar'; },
         function(&$state) {
             time_passes(60, $state);
+            return "Player does nothing for 1 hour.";
         }
     ),
     'end_of_round' => new Card(
@@ -207,6 +235,7 @@ $deck = [
         function(&$state) {
             $state['round']++;
             end_turn($state);
+            return "End of the round.";
         }
     ),
 ];

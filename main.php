@@ -3,6 +3,7 @@ require_once 'state.php';
 
 class Card {
     public string $name;
+    public array $narration;
     public Closure $action;
     public Closure $conditions;
 
@@ -18,7 +19,9 @@ class Card {
 
     public function play(array &$state) {
         if (!$this->is_playable($state)) { return; }
-        ($this->action)($state);
+        $the_narration = ($this->action)($state);
+        echo $the_narration."\n";
+        sleep(5);
     }
 }
 
@@ -27,7 +30,10 @@ function playable_cards(array $deck, array $state): array {
         'skip' => new Card(
             'skip',
             function() { return true; },
-            function(&$state) { end_turn($state); }
+            function(&$state) {
+                end_turn($state);
+                return "Let's see what else is happening.";
+            }
         )
     ];
     $playable_cards = array_filter($deck, function ($card) use($state) { return $card->is_playable($state); });
