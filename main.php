@@ -17,11 +17,26 @@ class Card {
         return ($this->conditions)($state);
     }
 
+    function type_write(string $text, int $ms = 30000) {
+        $chars = mb_str_split($text);
+        foreach ($chars as $char) {
+            echo $char;
+            usleep($ms); // 30ms per character
+        }
+        echo "\n";
+    }
+
     public function play(array &$state) {
         if (!$this->is_playable($state)) { return; }
-        $the_narration = ($this->action)($state);
-        echo $the_narration."\n";
-        sleep(5);
+        $message = ($this->action)($state);
+
+        $yellow = "\033[33m";
+        $white = "\033[37m";
+        $reset = "\033[0m";
+        $bold = "\033[1m";
+
+        $this->type_write("{$white}{$bold}» $message{$reset}");
+        sleep(1);
     }
 }
 

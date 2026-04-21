@@ -64,7 +64,7 @@ function sun_light_level(array &$state) {
 function light_level(array &$state) {
     $sun_light_level = sun_light_level($state);
     $fire_light_level = 0;
-    if ($state['fire_minutes'] ?? 0) {
+    if (($state['fire_minutes'] ?? 0) > 0) {
         $fire_light_level + 4;
     }
     return $sun_light_level + $fire_light_level;
