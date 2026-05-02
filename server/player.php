@@ -35,12 +35,12 @@ function snake_case(string $string): string {
     return preg_replace('/[^a-z0-9_]/', '', $snake);
 }
 
-function handle_disconnect(array &$player_list, int $failed_index) { // VERY BAD FUNCTION
-    $client_socket_list = client_socket_list($player_list);
-    $disconnected_players = sockets_to_players([$client_socket_list[$failed_index]], $player_list);
+function handle_disconnect(array &$players, int $failed_index) { // VERY BAD FUNCTION
+    $client_socket_list = client_socket_list($players);
+    $disconnected_players = sockets_to_players([$client_socket_list[$failed_index]], $players);
 
     foreach ($disconnected_players as $disconnected_player) {
-        unset($player_list[$disconnected_player->name]);
+        unset($players[$disconnected_player->name]);
     }
 }
 
