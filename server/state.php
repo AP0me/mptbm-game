@@ -1,5 +1,6 @@
 <?php
 require_once 'player.php';
+require_once 'card.php';
 
 function next_player_key(array &$state): string {
     $currentIndex = array_search($state['acting_player'], $state['player_order']);
