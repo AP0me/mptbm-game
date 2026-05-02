@@ -40,7 +40,7 @@ function print_state(array $state) {
     echo "{$cyan}{$bold}╚" . str_repeat("═", $box_width) . "╝{$reset}\n";
 }
 
-function print_cards($cards) {
+function print_cards(array $cards) {
     // Colors
     $bold = "\033[1m";
     $reset = "\033[0m";
@@ -77,7 +77,7 @@ function print_cards($cards) {
     echo "{$magenta}{$bold}╚" . str_repeat("═", $box_width) . "╝{$reset}\n\n";
 }
 
-function center_text($text, $width) {
+function center_text(string $text, int $width) {
     $text_length = mb_strwidth($text);
     if ($text_length >= $width) {
         return $text;
@@ -88,7 +88,7 @@ function center_text($text, $width) {
 }
 
 // Helper function to get visible width (strips ANSI codes)
-function mb_strwidth_no_ansi($string) {
+function mb_strwidth_no_ansi(string $string) {
     // Remove ANSI escape sequences
     $clean_string = preg_replace('/\033\[[0-9;]*m/', '', $string);
     return mb_strwidth($clean_string);
@@ -103,7 +103,7 @@ function type_write(string $text, int $ms = 30000) {
     echo "\n";
 }
 
-function print_card_response($message) {
+function print_card_response(string $message) {
     $yellow = "\033[33m";
     $white = "\033[37m";
     $reset = "\033[0m";
