@@ -5,7 +5,6 @@ function acting_player(array $state): string {
 }
 
 function robot_input(string $string) {
-    echo "$string\n";
     sleep(1);
     return $string;
 }

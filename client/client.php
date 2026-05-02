@@ -37,7 +37,7 @@ function print_state(array $state) {
         echo "{$cyan}{$bold}║{$reset} {$key_part}{$val_part}" . str_repeat(" ", $padding+1) . "{$cyan}{$bold}║{$reset}\n";
     }
 
-    echo "{$cyan}{$bold}╚" . str_repeat("═", $box_width) . "╝{$reset}";
+    echo "{$cyan}{$bold}╚" . str_repeat("═", $box_width) . "╝{$reset}\n";
 }
 
 function print_cards($cards) {

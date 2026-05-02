@@ -95,7 +95,7 @@ while ($state["status"] === "RUNNING") {
     send_state($state, $client_socket_list);
     
     $playable_cards = playable_cards($deck, $state);
-    send_cards($playable_cards, $client_socket_list);
+    send_cards($playable_cards, [$player->client_socket]);
     
     $card = choose_card($player, $playable_cards, $state);
     
