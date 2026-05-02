@@ -30,11 +30,7 @@ function connect_to_server() {
 
     echo "\033[1;32mConnected successfully!\033[0m\n";
     echo "\033[1;33mWelcome to the Game!\033[0m\n";
-    echo "Enter your character name: ";
-    $name = trim(fgets(STDIN));
-    
-    @socket_write($socket, $name . "\n"); 
-    echo "Accepted. Waiting for the other players... \n";
+    echo "Waiting for the other players... \n";
 
     return $socket;
 }
