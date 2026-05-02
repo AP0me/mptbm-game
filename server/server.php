@@ -4,7 +4,7 @@ require_once 'network.php';
 
 $state = init_state();
 $deck = init_deck();
-$players = init_players($state);
+$players = init_players($state, '0.0.0.0', 8080);
 
 $client_socket_list = client_socket_list($players);
 

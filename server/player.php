@@ -5,7 +5,6 @@ function acting_player(array $state): string {
 }
 
 function robot_input(Socket $client_socket, string $string): string {
-    socket_write($client_socket, $string . "\n"); 
     sleep(1);
     return $string;
 }
@@ -61,9 +60,11 @@ class Player {
     }
 }
 
-function init_players(array &$state): array {
-    $address = '0.0.0.0';
-    $port = 8080;
+function init_players(array &$state, string $address, int $port): array | false {
+    if (!filter_var($address, FILTER_VALIDATE_IP)) {
+        return false;
+    }
+
     $server_socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
     socket_set_option($server_socket, SOL_SOCKET, SO_REUSEADDR, 1);
     socket_bind($server_socket, $address, $port);
