@@ -18,9 +18,21 @@ function human_input(Socket $client_socket): string {
     return trim(socket_read($client_socket, 1024));
 }
 
-function snake_case(string $input): string {
-    $snake = preg_replace('/[A-Z]/', '_$0', $input);
-    return ltrim(strtolower($snake), '_');
+function snake_case(string $string): string {
+    // 1. Regex to find word boundaries:
+    // - Consecutive uppercase letters (acronyms)
+    // - Standard CamelCase transitions
+    // - Numbers or lowercase word chunks
+    $pattern = '/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/';
+    
+    preg_match_all($pattern, $string, $matches);
+    
+    // 2. Flatten the matches, lowercase them, and join with underscores
+    $words = array_map('mb_strtolower', $matches[0]);
+    
+    $snake = implode('_', $words);
+
+    return preg_replace('/[^a-z0-9_]/', '', $snake);
 }
 
 class Player {
