@@ -157,7 +157,9 @@ while (true) {
 
         case 'CARDS':
             print_cards($packet['data']);
-            // After printing cards, it's time for the user to make a choice
+            break;
+
+        case 'CHOICE':
             echo "\033[1;33m➤ Enter card key (e.g. skip, hunt): \033[0m";
             $choice = trim(fgets(STDIN));
             socket_write($socket, $choice . "\n");

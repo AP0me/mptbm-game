@@ -47,6 +47,11 @@ function init_players(array &$state): array {
                 $name,
                 $client_socket,
                 function(&$state) use ($client_socket) {
+                    $packet = json_encode([
+                        'type' => 'CHOICE',
+                        'data' => []
+                    ]);
+                    socket_write($client_socket, $packet . "\n"); 
                     return trim(socket_read($client_socket, 1024));
                 }
             );
