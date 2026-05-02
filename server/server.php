@@ -11,21 +11,18 @@ $client_socket_list = client_socket_list($players);
 while ($state["status"] === "RUNNING") {
     $player = $players[acting_player($state)];
 
-    $failed_index = send_state($state, $client_socket_list);
+    send_state($state, $client_socket_list);
     
     $playable_cards = playable_cards($deck, $state);
-    $failed_index = send_cards($playable_cards, [$player->client_socket]);
-    handle_disconnect($players, $failed_index);
+    send_cards($playable_cards, [$player->client_socket]);
     
     $card = choose_card($player, $playable_cards, $state);
     
     $message = $card->play($state);
 
     if (is_string($message)) {
-        $failed_index = send_message($message, $client_socket_list);
-        handle_disconnect($players, $failed_index);
+        send_message($message, $client_socket_list);
     }
 }
 
-$failed_index = send_state($state, $client_socket_list);
-handle_disconnect($players, $failed_index);
+send_state($state, $client_socket_list);

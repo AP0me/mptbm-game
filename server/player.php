@@ -4,7 +4,8 @@ function acting_player(array $state): string {
     return $state['acting_player'];
 }
 
-function robot_input(string $string): string {
+function robot_input(Socket $client_socket, string $string): string {
+    socket_write($client_socket, $string . "\n"); 
     sleep(1);
     return $string;
 }
@@ -90,14 +91,15 @@ function init_players(array &$state): array {
     }
 
     $robot_client_sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+    $GLOBALS['robot_client_sockets'][] = $robot_client_sock;
     socket_connect($robot_client_sock, $address, $port);
     $robot_server_sock = socket_accept($server_socket);
 
     $players['round'] = new Player(
         'Round',
         $robot_server_sock,
-        function(&$state) {
-            $input = robot_input('end_of_round');
+        function(&$state) use ($robot_client_sock) {
+            $input = robot_input($robot_client_sock, 'end_of_round');
             return $input;
         }
     );
