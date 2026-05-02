@@ -206,12 +206,8 @@ function init_deck(): array {
             function(&$state) {
                 $state['sleeping'] = true;
                 $has_fire = ($state['fire_minutes'] ?? 0) > 0;
-                $fire_bonus = 0;
-                if ($has_fire) {
-                    $fire_bonus = 10;
-                    time_passes(8 * 60, $state);
-                }
-                add_energy($state, $fire_bonus);
+                time_passes(8 * 60, $state);
+                add_energy($state, $has_fire ? 70 : 60);
                 unset($state['sleeping']);
 
                 return $has_fire ? 

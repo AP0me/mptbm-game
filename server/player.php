@@ -36,7 +36,7 @@ function init_players(array &$state): array {
     echo "Server started on $address:$port. Waiting for players...\n";
 
     $players = [];
-    $required_players = 1;
+    $required_players = 2;
 
     while (count($players) < $required_players) {
         $client_socket = socket_accept($server_socket);
