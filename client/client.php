@@ -1,8 +1,10 @@
 <?php
 require_once 'display.php';
 
-$address = '127.0.0.1';
-$port    = 8080;
+echo "Address: ";
+$address = trim(fgets(STDIN));
+echo "Port: ";
+$port = trim(fgets(STDIN));
 
 $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 if ($socket === false) {
@@ -19,12 +21,14 @@ echo "\033[1;33mWelcome to the Game!\033[0m\n";
 echo "Enter your character name: ";
 $name = trim(fgets(STDIN));
 socket_write($socket, $name . "\n"); 
+echo "Accepted. \n";
 
 while (true) {
     /** 
      * PHP_NORMAL_READ reads until it hits \n. 
      * This matches the server's socket_write($packet . "\n") logic.
      */
+    echo "Waiting for the other players... \n";
     $buffer = socket_read($socket, 8192, PHP_NORMAL_READ);
     
     if ($buffer === false || $buffer === "") {
