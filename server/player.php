@@ -4,7 +4,7 @@ function acting_player(array $state): string {
     return $state['acting_player'];
 }
 
-function robot_input(Socket $client_socket, string $string): string {
+function robot_input(string $string): string {
     sleep(1);
     return $string;
 }
