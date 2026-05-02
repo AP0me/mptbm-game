@@ -74,12 +74,17 @@ function choose_card(Player $player, array $playable_cards, array $state): Card 
 }
 
 function robot_players(array &$players, Socket $robot_socket) {
-    $players['round'] = new Player(
-        'round',
-        $robot_socket,
-        function() use ($robot_socket) {
-            $input = robot_input($robot_socket, 'end_of_round');
-            return $input;
-        }
-    );
+    $robot_players = [
+        'round' => new Player(
+            'round',
+            $robot_socket,
+            function() use ($robot_socket) {
+                return robot_input($robot_socket, 'end_of_round');
+            }
+        )
+    ];
+
+    foreach ($robot_players as $player_key => $robot_player) {
+        $players[$player_key] = $robot_player;
+    }
 }
