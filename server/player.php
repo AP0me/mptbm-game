@@ -4,9 +4,23 @@ function acting_player(array $state): string {
     return $state['acting_player'];
 }
 
-function robot_input(string $string) {
+function robot_input(string $string): string {
     sleep(1);
     return $string;
+}
+
+function human_input(Socket $client_socket): string {
+    $packet = json_encode([
+        'type' => 'CHOICE',
+        'data' => []
+    ]);
+    socket_write($client_socket, $packet . "\n"); 
+    return trim(socket_read($client_socket, 1024));
+}
+
+function snake_case(string $input): string {
+    $snake = preg_replace('/[A-Z]/', '_$0', $input);
+    return ltrim(strtolower($snake), '_');
 }
 
 class Player {
@@ -39,38 +53,30 @@ function init_players(array &$state): array {
 
     while (count($players) < $required_players) {
         $client_socket = socket_accept($server_socket);
-        if ($client_socket) {
-            $name = trim(socket_read($client_socket, 1024));
-            
-            $players[strtolower($name)] = new Player(
-                $name,
-                $client_socket,
-                function(&$state) use ($client_socket) {
-                    $packet = json_encode([
-                        'type' => 'CHOICE',
-                        'data' => []
-                    ]);
-                    socket_write($client_socket, $packet . "\n"); 
-                    return trim(socket_read($client_socket, 1024));
-                }
-            );
-            
-            echo "Player $name joined the game.\n";
-        }
+        if ($client_socket === false) { continue; }
+
+        $name = trim(socket_read($client_socket, 1024));
+        $player_key = snake_case(strtolower($name));
+        $players[$player_key] = new Player(
+            $name,
+            $client_socket,
+            function(&$state) use ($client_socket) {
+                return human_input($client_socket);
+            }
+        );
+        
+        echo "Player $name joined the game.\n";
     }
 
     $robot_client_sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
     socket_connect($robot_client_sock, $address, $port);
     $robot_server_sock = socket_accept($server_socket);
-    socket_write($robot_client_sock, "Round\n");
-    $name = trim(socket_read($robot_server_sock, 1024));
 
     $players['round'] = new Player(
-        $name,
+        'Round',
         $robot_server_sock,
-        function(&$state) use ($robot_client_sock) {
+        function(&$state) {
             $input = robot_input('end_of_round');
-            socket_write($robot_client_sock, $input . "\n");
             return $input;
         }
     );
