@@ -68,7 +68,7 @@ function light_level(array &$state) {
     return $sun_light_level + $fire_light_level;
 }
 
-function time_passes($minutes, array &$state) {
+function time_passes(int $minutes, array &$state) {
     $state['date_time'] = date('Y-m-d H:i:s', strtotime("+$minutes minutes", date_time_stamp($state)));
     
     $state['minutes_left_per_player'] = max($state['minutes_left_per_player'] - $minutes, 0);
@@ -104,6 +104,18 @@ function init_state(): array {
         'max_energy' => 100,
         'energy' => 100,
         'food' => 0,
+    ];
+}
+
+function robot_players(Socket $robot_socket) {
+    return [
+        'round' => new Player(
+            'round',
+            $robot_socket,
+            function() {
+                return robot_input('end_of_round');
+            }
+        )
     ];
 }
 

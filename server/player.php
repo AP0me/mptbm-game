@@ -71,15 +71,3 @@ function choose_card(Player $player, array $playable_cards, array $state): Card 
 
     return $playable_cards['skip'];
 }
-
-function robot_players(Socket $robot_socket) {
-    return [
-        'round' => new Player(
-            'round',
-            $robot_socket,
-            function() {
-                return robot_input('end_of_round');
-            }
-        )
-    ];
-}
