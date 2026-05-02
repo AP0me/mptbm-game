@@ -1,38 +1,53 @@
 <?php
 require_once 'display.php';
 
-echo "Address: ";
-$address = trim(fgets(STDIN));
-echo "Port: ";
-$port = trim(fgets(STDIN));
-
-$socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-if ($socket === false) {
-    die("socket_create() failed: " . socket_strerror(socket_last_error()) . "\n");
+function print_error(string $message) {
+    echo "\n\033[1;31m[ERROR]: $message\033[0m\n\n";
 }
 
-echo "Attempting to connect to $address on port $port...\n";
-$result = socket_connect($socket, $address, $port);
-if ($result === false) {
-    die("socket_connect() failed: " . socket_strerror(socket_last_error($socket)) . "\n");
+function connect_to_server() {
+    echo "--- Server Connection ---\n";
+    echo "Address: ";
+    $address = trim(fgets(STDIN));
+    echo "Port: ";
+    $port = trim(fgets(STDIN));
+
+    // Create Socket
+    $socket = @socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+    if ($socket === false) {
+        print_error("Could not create socket: " . socket_strerror(socket_last_error()));
+        return connect_to_server();
+    }
+
+    echo "Attempting to connect to $address on port $port...\n";
+
+    // Connect to Socket
+    $result = @socket_connect($socket, $address, $port);
+    if ($result === false) {
+        print_error("Connection refused: " . socket_strerror(socket_last_error($socket)));
+        return connect_to_server();
+    }
+
+    echo "\033[1;32mConnected successfully!\033[0m\n";
+    echo "\033[1;33mWelcome to the Game!\033[0m\n";
+    echo "Enter your character name: ";
+    $name = trim(fgets(STDIN));
+    
+    @socket_write($socket, $name . "\n"); 
+    echo "Accepted. Waiting for the other players... \n";
+
+    return $socket;
 }
 
-echo "\033[1;33mWelcome to the Game!\033[0m\n";
-echo "Enter your character name: ";
-$name = trim(fgets(STDIN));
-socket_write($socket, $name . "\n"); 
-echo "Accepted. Waiting for the other players... \n";
+$socket = connect_to_server();
 
 while (true) {
-    /** 
-     * PHP_NORMAL_READ reads until it hits \n. 
-     * This matches the server's socket_write($packet . "\n") logic.
-     */
-    $buffer = socket_read($socket, 8192, PHP_NORMAL_READ);
+    $buffer = @socket_read($socket, 8192, PHP_NORMAL_READ);
     
     if ($buffer === false || $buffer === "") {
-        echo "\n\033[1;31mConnection lost to server.\033[0m\n";
-        break;
+        print_error("Connection lost to server.");
+        $socket = connect_to_server();
+        continue;
     }
 
     $packet = json_decode(trim($buffer), true);
@@ -50,7 +65,7 @@ while (true) {
         case 'CHOICE':
             echo "\033[1;33m➤ Enter card key (e.g. skip, hunt): \033[0m";
             $choice = trim(fgets(STDIN));
-            socket_write($socket, $choice . "\n");
+            @socket_write($socket, $choice . "\n");
             break;
             
         case 'MESSAGE':
