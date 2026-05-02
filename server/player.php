@@ -44,7 +44,6 @@ class Player {
 function human_players(array $state, Socket $server_socket, array &$players): array | false {
     $required_players = array_diff($state['player_order'], array_values(array_keys($players)));
     while (count($required_players) > 0) {
-        var_dump($required_players);
         $client_socket = socket_accept($server_socket);
         if ($client_socket === false) { continue; }
 
@@ -73,8 +72,8 @@ function choose_card(Player $player, array $playable_cards, array $state): Card 
     return $playable_cards['skip'];
 }
 
-function robot_players(array &$players, Socket $robot_socket) {
-    $robot_players = [
+function robot_players(Socket $robot_socket) {
+    return [
         'round' => new Player(
             'round',
             $robot_socket,
@@ -83,8 +82,4 @@ function robot_players(array &$players, Socket $robot_socket) {
             }
         )
     ];
-
-    foreach ($robot_players as $player_key => $robot_player) {
-        $players[$player_key] = $robot_player;
-    }
 }

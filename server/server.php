@@ -10,8 +10,7 @@ $robot_socket = robot_socket($server_socket, $address, $port);
 $state = init_state();
 $deck = init_deck();
 
-$players = [];
-robot_players($players, $robot_socket);
+$players = robot_players($robot_socket);
 human_players($state, $server_socket, $players);
 
 $client_socket_list = client_socket_list($players);
