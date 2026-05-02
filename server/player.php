@@ -77,8 +77,8 @@ function robot_players(Socket $robot_socket) {
         'round' => new Player(
             'round',
             $robot_socket,
-            function() use ($robot_socket) {
-                return robot_input($robot_socket, 'end_of_round');
+            function() {
+                return robot_input('end_of_round');
             }
         )
     ];
