@@ -71,3 +71,16 @@ function sockets_to_players(array $client_socket_list, array $player_list) {
     }
     return $found_players;
 }
+
+function server_socket(string $address, int $port): Socket | false {
+    if (!filter_var($address, FILTER_VALIDATE_IP)) {
+        return false;
+    }
+
+    $server_socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+    socket_set_option($server_socket, SOL_SOCKET, SO_REUSEADDR, 1);
+    socket_bind($server_socket, $address, $port);
+    socket_listen($server_socket, 5);
+
+    return $server_socket;
+}

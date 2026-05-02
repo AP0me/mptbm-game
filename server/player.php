@@ -41,31 +41,10 @@ class Player {
     }
 }
 
-function init_players(array $state, string $address, int $port): array | false {
-    if (!filter_var($address, FILTER_VALIDATE_IP)) {
-        return false;
-    }
-
-    $server_socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-    socket_set_option($server_socket, SOL_SOCKET, SO_REUSEADDR, 1);
-    socket_bind($server_socket, $address, $port);
-    socket_listen($server_socket, 5);
-    echo "Server started on $address:$port. Waiting for players...\n";
-
-    $players = [
-        'round' => new Player(
-            'round',
-            robot_socket($server_socket, $address, $port),
-            function(&$state) {
-                $robot_client_sock = $this->client_socket;
-                $input = robot_input($robot_client_sock, 'end_of_round');
-                return $input;
-            }
-        )
-    ];
-
+function human_players(array $state, Socket $server_socket, array &$players): array | false {
     $required_players = array_diff($state['player_order'], array_values(array_keys($players)));
     while (count($required_players) > 0) {
+        var_dump($required_players);
         $client_socket = socket_accept($server_socket);
         if ($client_socket === false) { continue; }
 
@@ -73,7 +52,7 @@ function init_players(array $state, string $address, int $port): array | false {
         $players[$name] = new Player(
             $name,
             $client_socket,
-            function(&$state) use ($client_socket) {
+            function() use ($client_socket) {
                 return human_input($client_socket);
             }
         );
@@ -92,4 +71,15 @@ function choose_card(Player $player, array $playable_cards, array $state): Card 
     }
 
     return $playable_cards['skip'];
+}
+
+function robot_players(array &$players, Socket $robot_socket) {
+    $players['round'] = new Player(
+        'round',
+        $robot_socket,
+        function() use ($robot_socket) {
+            $input = robot_input($robot_socket, 'end_of_round');
+            return $input;
+        }
+    );
 }
