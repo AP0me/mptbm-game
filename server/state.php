@@ -122,10 +122,10 @@ function init_deck(): array {
                 return acting_player($state) === 'anar' && $state['food'] > 0;
             },
             function(&$state) {
+                time_passes(30, $state);
                 $cooked = ($state['fire_minutes'] ?? 0) > 0 ? 50 : 20;
                 add_energy($state, $cooked);
                 add_food($state, -15);
-                time_passes(30, $state);
                 
                 return $cooked ? "The player stopped to eat a cooked meal." : "The player stopped to eat raw food.";
             }
