@@ -17,11 +17,9 @@ class Card {
         return ($this->conditions)($state);
     }
 
-    public function play(array &$state) {
-        if (!$this->is_playable($state)) { return; }
-        $message = ($this->action)($state);
-
-        // send message to client
+    public function play(array &$state): string | null {
+        if (!$this->is_playable($state)) { return null; }
+        return ($this->action)($state);
     }
 }
 
@@ -67,6 +65,16 @@ function send_cards(array $playable_cards, array $client_sockets) {
     }
 }
 
+function send_message(string $message, array $client_sockets) {
+    $packet = json_encode([
+        'type' => 'MESSAGE',
+        'data' => $message
+    ]);
+    foreach ($client_sockets as $client_socket) {
+        socket_write($client_socket, $packet . "\n"); 
+    }
+}
+
 function client_socket_list(array $player_list) {
     $client_socket_list = [];
     foreach ($player_list as $player) {
@@ -91,7 +99,11 @@ while ($state["status"] === "RUNNING") {
     
     $card = choose_card($player, $playable_cards, $state);
     
-    $card->play($state);
+    $message = $card->play($state);
+
+    if (is_string($message)) {
+        send_message($message, $client_socket_list);
+    }
 }
 
 send_state($state, $client_socket_list);
