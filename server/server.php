@@ -11,18 +11,27 @@ $client_socket_list = client_socket_list($players);
 while ($state["status"] === "RUNNING") {
     $player = $players[acting_player($state)];
 
-    send_state($state, $client_socket_list);
+    $failed_index = send_state($state, $client_socket_list);
     
     $playable_cards = playable_cards($deck, $state);
-    send_cards($playable_cards, [$player->client_socket]);
+    $failed_index = send_cards($playable_cards, [$player->client_socket]);
+    $disconnected_player = sockets_to_players([$client_socket_list[$failed_index]], $players)[0];
+    remove_players($state, [$disconnected_player->name]);
+    unset($players[$disconnected_player->name]);
     
     $card = choose_card($player, $playable_cards, $state);
     
     $message = $card->play($state);
 
     if (is_string($message)) {
-        send_message($message, $client_socket_list);
+        $failed_index = send_message($message, $client_socket_list);
+        $disconnected_player = sockets_to_players([$client_socket_list[$failed_index]], $players)[0];
+        remove_players($state, [$disconnected_player->name]);
+        unset($players[$disconnected_player->name]);
     }
 }
 
-send_state($state, $client_socket_list);
+$failed_index = send_state($state, $client_socket_list);
+$disconnected_player = sockets_to_players([$client_socket_list[$failed_index]], $players)[0];
+remove_players($state, [$disconnected_player->name]);
+unset($players[$disconnected_player->name]);

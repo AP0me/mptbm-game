@@ -29,7 +29,7 @@ function packet_multi_send(array $client_sockets, array $packet) {
 }
 
 function send_state(array $state, array $client_sockets) {
-    packet_multi_send($client_sockets, [
+    return packet_multi_send($client_sockets, [
         'type' => 'STATE',
         'data' => $state
     ]);
@@ -43,14 +43,14 @@ function send_cards(array $playable_cards, array $client_sockets) {
         ];
     }
 
-    packet_multi_send($client_sockets, [
+    return packet_multi_send($client_sockets, [
         'type' => 'CARDS',
         'data' => $card_name_by_key
     ]);
 }
 
 function send_message(string $message, array $client_sockets) {
-    packet_multi_send($client_sockets, [
+    return packet_multi_send($client_sockets, [
         'type' => 'MESSAGE',
         'data' => $message
     ]);
@@ -62,4 +62,14 @@ function client_socket_list(array $player_list) {
         $client_socket_list[] = $player->client_socket;
     }
     return $client_socket_list;
+}
+
+function sockets_to_players(array $client_socket_list, array $player_list) {
+    $found_players = [];
+    foreach ($player_list as $player) {
+        if (in_array($player->client_socket, $client_socket_list, true)) {
+            $found_players[] = $player;
+        }
+    }
+    return $found_players;
 }

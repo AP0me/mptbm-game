@@ -35,6 +35,16 @@ function snake_case(string $string): string {
     return preg_replace('/[^a-z0-9_]/', '', $snake);
 }
 
+function handle_disconnect(array &$state, array $player_list, int $failed_index) {
+    $client_socket_list = client_socket_list($player_list);
+    $disconnected_players = sockets_to_players([$client_socket_list[$failed_index]], $player_list);
+
+    foreach ($disconnected_players as $disconnected_player) {
+        remove_players($state, [$disconnected_player->name]);
+        unset($players[$disconnected_player->name]);
+    }
+}
+
 class Player {
     public string $name;
     public Socket $client_socket;
@@ -68,8 +78,8 @@ function init_players(array &$state): array {
         if ($client_socket === false) { continue; }
 
         $name = trim(socket_read($client_socket, 1024));
-        $player_key = snake_case(strtolower($name));
-        $players[$player_key] = new Player(
+        $name = snake_case(strtolower($name));
+        $players[$name] = new Player(
             $name,
             $client_socket,
             function(&$state) use ($client_socket) {
