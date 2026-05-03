@@ -23,13 +23,17 @@ function end_turn(array &$state) {
 }
 
 function add_energy(array &$state, int $add) {
-    $state['energy'] += $add;
-    if ($state['energy'] <= 0) {
-        $state['energy'] = 0;
+    $player_key = acting_player($state);
+    $state["$player_key.energy"] += $add;
+    if (pl_dotkey($state, 'energy') <= 0) {
+        $state["$player_key.energy"] = 0;
         remove_players($state, ['anar']);
         $state['status'] = 'LOST';
     }
-    $state['energy'] = $state['energy'] > $state['max_energy'] ? $state['max_energy'] : $state['energy'];
+    $state["$player_key.energy"] = 
+    pl_dotkey($state, 'energy') > $state["$player_key.max_energy"] ?
+        $state["$player_key.max_energy"] :
+        pl_dotkey($state, 'energy');
 }
 
 function add_food(array &$state, int $add) {
@@ -92,19 +96,32 @@ function time_passes(int $minutes, array &$state) {
     add_energy($state, $energy_spent);
 }
 
+function pl_dotkey(array $state, string $bare_key) {
+    $player_key = acting_player($state);
+    return $state["$player_key.$bare_key"];
+}
+
+function human_keys() {
+    return ['anar'];
+}
+
 function init_state(): array {
-    return [
+    $state = [
         'status' => 'RUNNING',
         'round' => 1,
-        'player_order' => ['anar', 'round'],
-        'acting_player' => 'anar',
+        'player_order' => array_values(array_merge(human_keys(), ['round'])),
+        'acting_player' => human_keys()[0],
 
         'date_time' => date('Y-m-d 00:00:00'),
         'minutes_left_per_player' => 60 * 24,
-        'max_energy' => 100,
-        'energy' => 100,
-        'food' => 0,
     ];
+
+    foreach (human_keys() as $human_key) {
+        $state["$human_key.max_energy"] = 100;
+        $state["$human_key.energy"] = 100;
+    }
+
+    return $state;
 }
 
 function robot_players(Socket $robot_socket) {
@@ -132,7 +149,7 @@ function init_deck(): array {
         'eat' => new Card(
             'Eat 10 food',
             function(&$state) {
-                return acting_player($state) === 'anar' && $state['food'] > 0;
+                return in_array(acting_player($state), human_keys()) && $state['food'] > 0;
             },
             function(&$state) {
                 time_passes(30, $state);
@@ -146,7 +163,7 @@ function init_deck(): array {
         'hunt' => new Card(
             'Hunt game',
             function(&$state) {
-                return acting_player($state) === 'anar' && $state['energy'] > 30;
+                return in_array(acting_player($state), human_keys()) && pl_dotkey($state, 'energy') > 30;
             },
             function(&$state) {
                 $light = sun_light_level($state);
@@ -162,8 +179,8 @@ function init_deck(): array {
             'Collect wood',
             function(&$state) {
                 return (
-                    acting_player($state) === 'anar' &&
-                    $state['energy'] > 5
+                    in_array(acting_player($state), human_keys()) &&
+                    pl_dotkey($state, 'energy') > 5
                 );
             },
             function(&$state) {
@@ -182,8 +199,8 @@ function init_deck(): array {
             'Make fire with 10 wood',
             function(&$state) {
                 return (
-                    acting_player($state) === 'anar' &&
-                    ($state['energy'] > 45 || ($state['fire_minutes'] ?? 0) > 0) &&
+                    in_array(acting_player($state), human_keys()) &&
+                    (pl_dotkey($state, 'energy') > 45 || ($state['fire_minutes'] ?? 0) > 0) &&
                     ($state['wood'] ?? 0) > 0
                 );
             },
@@ -212,7 +229,7 @@ function init_deck(): array {
             'Sleep 8 hours',
             function(&$state) {
                 return (
-                    acting_player($state) === 'anar' &&
+                    in_array(acting_player($state), human_keys()) &&
                     sun_light_level($state) <= 0
                 );
             },
@@ -230,7 +247,7 @@ function init_deck(): array {
         ),
         'wait' => new Card(
             'Wait 1 hour',
-            function(&$state) { return acting_player($state) === 'anar'; },
+            function(&$state) { return in_array(acting_player($state), human_keys()); },
             function(&$state) {
                 time_passes(60, $state);
                 return "Player does nothing for 1 hour.";
