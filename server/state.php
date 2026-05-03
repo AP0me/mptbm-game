@@ -24,6 +24,7 @@ function end_turn(array &$state) {
 
 function add_energy(array &$state, int $add) {
     $player_key = acting_player($state);
+    $state["$player_key.energy"] = $state["$player_key.energy"] ?? 0;
     $state["$player_key.energy"] += $add;
     if (pl_dotkey($state, 'energy') <= 0) {
         $state["$player_key.energy"] = 0;
@@ -37,9 +38,18 @@ function add_energy(array &$state, int $add) {
 }
 
 function add_food(array &$state, int $add) {
+    $state['food'] = $state['food'] ?? 0;
     $state['food'] += $add;
     if ($state['food'] < 0) {
         $state['food'] = 0;
+    }
+}
+
+function add_wood(array &$state, int $add) {
+    $state['wood'] = $state['wood'] ?? 0;
+    $state['wood'] += $add;
+    if ($state['wood'] < 0) {
+        $state['wood'] = 0;
     }
 }
 
@@ -189,8 +199,8 @@ function init_deck(): array {
             function(&$state) {
                 add_energy($state, -5);
                 $has_light = light_level($state) > 3;
-                $state['wood'] = $state['wood'] ?? 0; 
-                $state['wood'] += $has_light ? 5 : 3;
+                $state['wood'] = $state['wood'] ?? 0;
+                add_wood($state, ($has_light ? 5 : 3));
                 time_passes(60, $state);
 
                 return $has_light ?
@@ -203,7 +213,8 @@ function init_deck(): array {
             function(&$state) {
                 return (
                     in_array(acting_player($state), human_keys()) &&
-                    $state['wood'] > 50
+                    isset($state['wood']) &&
+                    $state['wood'] >= 50
                 );
             },
             function(&$state) {
@@ -213,6 +224,7 @@ function init_deck(): array {
                 time_passes(60 * $modifier, $state);
 
                 $state['shelter'] = true;
+                add_wood($state, -50);
 
                 return $modifier === 1 ?
                 "The player built a shelter." :
@@ -242,6 +254,7 @@ function init_deck(): array {
                 $state['fire_minutes'] = $state['fire_minutes'] ?? 0;
                 $state['fire_minutes'] += round(($state['wood'] ?? 0) * 60 * 1.5);
                 $state['wood'] = max(0, ($state['wood'] ?? 0) - 10);
+                add_wood($state, ($state['wood'] ?? 0) - 10);
 
                 return $from_scratch ? 
                 "The player rubs sticks together to make fire. It was exhausting and time consuming." : 
