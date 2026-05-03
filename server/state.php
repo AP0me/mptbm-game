@@ -84,19 +84,10 @@ function light_level(array &$state) {
 
 function time_passes(int $minutes, array &$state) {
     $state['date_time'] = date('Y-m-d H:i:s', strtotime("+$minutes minutes", date_time_stamp($state)));
-    
-    $state['minutes_left_per_player'] = max($state['minutes_left_per_player'] - $minutes, 0);
-    if ($state['minutes_left_per_player'] === 0) {
-        end_turn($state);
-        $state['minutes_left_per_player'] = 60 * 24;
-        $state['date_time'] = date('Y-m-d 00:00:00', date_time_stamp($state));
-    }
 
     if (isset($state['fire_minutes'])) {
-        $state['fire_minutes'] = max($state['fire_minutes'] - $minutes, 0);
-        if ($state['fire_minutes'] === 0) {
-            unset($state['fire_minutes']);
-        }
+        $state['fire_minutes'] = $state['fire_minutes'] - $minutes;
+        $state['fire_minutes'] > 0 ? $state['fire_minutes'] : 0;
     }
 
     $energy_spent = round(-10 * ($minutes / 60));
@@ -127,6 +118,7 @@ function init_state(): array {
 
         'date_time' => date('Y-m-d 00:00:00'),
         'minutes_left_per_player' => 60 * 24,
+        'location' => 'forest',
     ];
 
     foreach (human_keys() as $human_key) {
@@ -162,7 +154,10 @@ function init_deck(): array {
         'eat' => new Card(
             'Eat 10 food',
             function(&$state) {
-                return in_array(acting_player($state), human_keys()) && $state['food'] > 0;
+                return (
+                    in_array(acting_player($state), human_keys()) &&
+                    ($state['food'] ?? 0) > 0
+                );
             },
             function(&$state) {
                 time_passes(30, $state);
@@ -176,7 +171,7 @@ function init_deck(): array {
         'hunt' => new Card(
             'Hunt game',
             function(&$state) {
-                return in_array(acting_player($state), human_keys()) && pl_dotkey($state, 'energy') > 30;
+                return in_array(acting_player($state), human_keys());
             },
             function(&$state) {
                 $light = sun_light_level($state);
@@ -209,7 +204,7 @@ function init_deck(): array {
             }
         ),
         'shelter' => new Card(
-            'Build a shelter',
+            'Build a shelter with 50 wood',
             function(&$state) {
                 return (
                     in_array(acting_player($state), human_keys()) &&
@@ -229,6 +224,87 @@ function init_deck(): array {
                 return $modifier === 1 ?
                 "The player built a shelter." :
                 "The player built a shelter. The lack of visibility made it challenging.";
+            }
+        ),
+        'boat' => new Card(
+            'Build a boat with 250 wood',
+            function(&$state) {
+                return (
+                    in_array(acting_player($state), human_keys()) &&
+                    isset($state['wood']) &&
+                    $state['wood'] >= 250
+                );
+            },
+            function(&$state) {
+                $modifier = -((int)(light_level($state) > 0) - 2);
+
+                add_energy($state, -45 * $modifier);
+                time_passes(60 * $modifier, $state);
+
+                $state['boat'] = true;
+                add_wood($state, -50);
+
+                return $modifier === 1 ?
+                "The player built a boat." :
+                "The player built a boat. The lack of visibility made it challenging.";
+            }
+        ),
+        'fish' => new Card(
+            'Go fishing',
+            function(&$state) {
+                return (
+                    in_array(acting_player($state), human_keys()) &&
+                    $state['boat'] ?? false
+                );
+            },
+            function(&$state) {
+                $lucky = rand(0, 1);
+                $yield = $lucky ? 12 : 3;
+                add_food($state, $yield);
+                time_passes(60, $state);
+                
+                if (sun_light_level($state) > 6 && ($state['bottle_map'] ?? false)) {
+                    $state['bottle_map'] = true;
+                    return "The player fishes out a map in a bottle.";
+                }
+
+                return $lucky ? "The player cought a big fish." : "The fishing trip was unlucky.";
+            }
+        ),
+        'follow_the_map' => new Card(
+            'Follow the map the player fished out.',
+            function(&$state) {
+                return (
+                    in_array(acting_player($state), human_keys()) &&
+                    ($state['bottle_map'] ?? false)
+                );
+            },
+            function(&$state) {
+                $state['location'] = 'caves';
+                if ($state['shelter'] ?? false) {
+                    $state['forest.shelter'] = $state['shelter'];
+                    unset($state['shelter']);
+                }
+                if ($state['boat'] ?? false) {
+                    $state['forest.boat'] = $state['boat'];
+                    unset($state['boat']);
+                }
+
+                $from_scratch = false;
+                if (!($state['fire_minutes'] > 0)) {
+                    $from_scratch = true;
+                    add_energy($state, -45);
+                    time_passes(60, $state);
+                }
+
+                $state['fire_minutes'] = $state['fire_minutes'] ?? 0;
+                $state['fire_minutes'] += round(($state['wood'] ?? 0) * 60 * 1.5);
+                $state['wood'] = max(0, ($state['wood'] ?? 0) - 10);
+                add_wood($state, ($state['wood'] ?? 0) - 10);
+
+                return $from_scratch ? 
+                "The player rubs sticks together to make fire. It was exhausting and time consuming." : 
+                "The player stokes the fire with more wood.";
             }
         ),
         'fire' => new Card(
