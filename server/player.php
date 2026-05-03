@@ -42,7 +42,7 @@ class Player {
 }
 
 function human_players(array $state, Socket $server_socket, array &$players): array | false {
-    $required_players = array_diff($state['player_order'], array_values(array_keys($players)));
+    $required_players = array_values(array_diff($state['player_order'], array_values(array_keys($players))));
     while (count($required_players) > 0) {
         $client_socket = socket_accept($server_socket);
         if ($client_socket === false) { continue; }
@@ -56,7 +56,7 @@ function human_players(array $state, Socket $server_socket, array &$players): ar
             }
         );
         
-        $required_players = array_diff($state['player_order'], array_values(array_keys($players)));
+        $required_players = array_values(array_diff($state['player_order'], array_values(array_keys($players))));
     };
 
     return $players;

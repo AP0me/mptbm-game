@@ -102,7 +102,7 @@ function pl_dotkey(array $state, string $bare_key) {
 }
 
 function human_keys() {
-    return ['anar'];
+    return ['anar', 'elshad'];
 }
 
 function init_state(): array {
