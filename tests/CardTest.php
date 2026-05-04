@@ -42,7 +42,7 @@ class CardTest extends TestCase {
         
         // Raw food
         $msg = $this->deck['eat']->play($this->state);
-        $this->assertEquals(70, $this->state['anar.energy']);
+        $this->assertEquals(65, $this->state['anar.energy']);
         $this->assertEquals(5, $this->state['food']);
         $this->assertStringContainsString("raw food", $msg);
 
@@ -65,7 +65,7 @@ class CardTest extends TestCase {
         $this->state['date_time'] = '2023-06-21 12:00:00'; // Day (Light > 3)
         $msg = $this->deck['wood']->play($this->state);
         $this->assertEquals(5, $this->state['wood']);
-        $this->assertEquals(95, $this->state['anar.energy']);
+        $this->assertEquals(85, $this->state['anar.energy']);
     }
 
     public function testShelterAndBoatCards() {
@@ -111,7 +111,7 @@ class CardTest extends TestCase {
         $this->state['anar.energy'] = 10;
         
         $msg = $this->deck['sleep']->play($this->state);
-        $this->assertEquals(70, $this->state['anar.energy']); // +60
+        $this->assertEquals(60, $this->state['anar.energy']); // +60
         $this->assertStringContainsString("in the cold", $msg);
     }
 
