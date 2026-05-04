@@ -327,9 +327,10 @@ function init_deck(): array {
             },
             function (&$state) {
                 $player_key = acting_player($state);
-                $food = $state['food'];
-                $wood = $state['wood'];
-                $fire = $state['fire_minutes'];
+                $loc = pl_dotkey($state, 'location');
+                $food = $state["$loc.food"];
+                $wood = $state["$loc.wood"];
+                $fire = $state["$loc.fire_minutes"];
                 add_food($state, -10);
                 add_wood($state, -10);
                 add_fire($state, -60);
