@@ -1,5 +1,9 @@
 <?php
 
+function print_error(string $message) {
+    echo "\n\033[1;31m[ERROR]: $message\033[0m\n\n";
+}
+
 function print_state(array $state) {
     // ANSI clear screen and home
     echo "\e[H\e[J";

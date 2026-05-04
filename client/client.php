@@ -1,10 +1,6 @@
 <?php
 require_once 'display.php';
 
-function print_error(string $message) {
-    echo "\n\033[1;31m[ERROR]: $message\033[0m\n\n";
-}
-
 function connect_to_server() {
     echo "--- Server Connection ---\n";
     echo "Address: ";

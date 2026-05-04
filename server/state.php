@@ -254,7 +254,7 @@ function init_deck(): array {
             function(&$state) {
                 return (
                     in_array(acting_player($state), human_keys()) &&
-                    $state['boat'] ?? false
+                    ($state['boat'] ?? false)
                 );
             },
             function(&$state) {
@@ -291,7 +291,7 @@ function init_deck(): array {
                 }
 
                 $from_scratch = false;
-                if (!($state['fire_minutes'] > 0)) {
+                if (!(($state['fire_minutes'] ?? 0) > 0)) {
                     $from_scratch = true;
                     add_energy($state, -45);
                     time_passes(60, $state);
