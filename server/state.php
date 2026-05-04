@@ -289,7 +289,7 @@ function init_deck(): array {
             }
         ),
         'fire' => new Card(
-            'Make fire (10 wood)',
+            'Make fire (upto 10 wood)',
             function(&$state) {
                 $loc = pl_dotkey($state, 'location');
                 return (
