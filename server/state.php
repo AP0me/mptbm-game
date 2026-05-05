@@ -22,19 +22,21 @@ function end_turn(array &$state) {
     $state['acting_player'] = next_player_key($state);
 }
 
-function add_energy(array &$state, int $add) {
+function add_energy(array &$state, int $add): bool {
     $player_key = acting_player($state);
     $state["$player_key.energy"] = $state["$player_key.energy"] ?? 0;
     $state["$player_key.energy"] += $add;
     if (pl_dotkey($state, 'energy') <= 0) {
         $state["$player_key.energy"] = 0;
         remove_players($state, ['anar']);
-        $state['status'] = 'LOST';
+        return true;
     }
     $state["$player_key.energy"] = 
     pl_dotkey($state, 'energy') > $state["$player_key.max_energy"] ?
         $state["$player_key.max_energy"] :
         pl_dotkey($state, 'energy');
+    
+    return false;
 }
 
 function add_food(array &$state, int $add) {
@@ -112,7 +114,8 @@ function time_passes(int $minutes, array &$state) {
     if ($state["$loc.shelter"] ?? false) {
         $energy_spent = $energy_spent / 2;
     }
-    add_energy($state, $energy_spent);
+
+    return add_energy($state, $energy_spent);
 }
 
 function pl_dotkey(array $state, string $bare_key) {
@@ -132,7 +135,6 @@ function init_state(): array {
         'acting_player' => human_keys()[0],
 
         'date_time' => date('Y-m-d 00:00:00'),
-        'minutes_left_per_player' => 60 * 24,
     ];
 
     foreach (human_keys() as $human_key) {
@@ -177,9 +179,11 @@ function init_deck(): array {
             },
             function(&$state) {
                 $loc = pl_dotkey($state, 'location');
-                time_passes(30, $state);
+                $pdied = time_passes(30, $state);
+                if($pdied) return "Player died from hunger.";
                 $cooked = ($state["$loc.fire_minutes"] ?? 0) > 0 ? 50 : 20;
-                add_energy($state, $cooked);
+                $pdied = add_energy($state, $cooked);
+                if($pdied) return "Player died from overeating.";
                 add_food($state, -15);
                 
                 return $cooked > 20 ? "The player ate a cooked meal." : "The player ate raw food.";
@@ -195,8 +199,10 @@ function init_deck(): array {
                 $is_day = ($light > 0);
                 $yield = $is_day ? 12 : 3;
                 add_food($state, $yield);
-                add_energy($state, -10);
-                time_passes(60, $state);
+                $pdied = add_energy($state, -10);
+                if($pdied) return "Player died from exhaustion.";
+                $pdied = time_passes(60, $state);
+                if($pdied) return "Player died from hunger.";
                 return $is_day ?
                 "The daytime hunt was highly productive." :
                 "Hunting at night was difficult.";
@@ -211,14 +217,16 @@ function init_deck(): array {
                 );
             },
             function(&$state) {
-                add_energy($state, -5);
+                $pdied = add_energy($state, -5);
+                if($pdied) return "Player died from exhaustion.";
                 $has_light = light_level($state) > 3;
                 add_wood($state, ($has_light ? 5 : 3));
-                time_passes(60, $state);
+                $pdied = time_passes(60, $state);
+                if($pdied) return "Player died from hunger.";
 
                 return $has_light ?
                 "The player foraged for wood." :
-                "Lack of visibility made foraging challenging.";
+                "The player foraged for wood. Lack of visibility made foraging challenging.";
             }
         ),
         'shelter' => new Card(
@@ -233,8 +241,10 @@ function init_deck(): array {
             function(&$state) {
                 $loc = pl_dotkey($state, 'location');
 
-                add_energy($state, -45);
-                time_passes(60, $state);
+                $pdied = add_energy($state, -45);
+                if($pdied) return "Player died from exhaustion.";
+                $pdied = time_passes(60, $state);
+                if($pdied) return "Player died from hunger.";
 
                 $state["$loc.shelter"] = true;
                 add_wood($state, -50);
@@ -254,8 +264,10 @@ function init_deck(): array {
             function(&$state) {
                 $loc = pl_dotkey($state, 'location');
 
-                add_energy($state, -45);
-                time_passes(60, $state);
+                $pdied = add_energy($state, -45);
+                if($pdied) return "Player died from exhaustion.";
+                $pdied = time_passes(60, $state);
+                if($pdied) return "Player died from hunger.";
 
                 $state["$loc.boat"] = true;
                 add_wood($state, -250);
@@ -276,7 +288,8 @@ function init_deck(): array {
                 $lucky = rand(0, 1);
                 $yield = $lucky ? 12 : 3;
                 add_food($state, $yield);
-                time_passes(60, $state);
+                $pdied = time_passes(60, $state);
+                if($pdied) return "Player died from hunger.";
                 
                 if (sun_light_level($state) > 6 && !isset($state['bottle_map'])) {
                     $state['bottle_map'] = true;
@@ -303,14 +316,17 @@ function init_deck(): array {
 
                 if (($state["$loc.fire_minutes"] ?? 0) <= 0) {
                     $from_scratch = true;
-                    add_energy($state, -45);
-                    time_passes(60, $state);
-                    $state["$loc.fire_minutes"] = 0;
+                    $pdied = add_energy($state, -45);
+                    if($pdied) return "Player died from exhaustion.";
+                    $pdied = time_passes(60, $state);
+                    if($pdied) return "Player died from hunger.";
                 }
 
-                add_fire($state, round(($state['wood'] ?? 0) * 60 * 1.5));
-                $state['wood'] = max(0, ($state['wood'] ?? 0) - 10);
-                add_wood($state, ($state['wood'] ?? 0) - 10);
+                $current_wood = $state["$loc.wood"] ?? 0;
+                $wood_to_burn = min($current_wood, 10);
+
+                add_fire($state, round($wood_to_burn * 60 * 1.5));
+                add_wood($state, -$wood_to_burn);
 
                 return $from_scratch ? 
                 "The player rubs sticks together to make fire. It was exhausting and time consuming." : 
@@ -356,13 +372,35 @@ function init_deck(): array {
                 $state['sleeping'] = true;
                 $has_fire = ($state["$loc.fire_minutes"] ?? 0) > 0;
                 
-                time_passes(8 * 60, $state);
-                add_energy($state, $has_fire ? 70 : 60);
+                $pdied = time_passes(8 * 60, $state);
+                if($pdied) return "Player died from hunger.";
+                $pdied = add_energy($state, $has_fire ? 70 : 60);
+                if($pdied) return "Player died from exhaustion.";
                 unset($state['sleeping']);
 
                 return $has_fire ?
                 "The player slept in warmth." :
                 "The player slept in the cold.";
+            }
+        ),
+        'wait' => new Card(
+            'Wait 1 hour',
+            function(&$state) { return in_array(acting_player($state), human_keys()); },
+            function(&$state) {
+                $pdied = time_passes(60, $state);
+                if($pdied) return "Player died from hunger.";
+                return "Player does nothing for 1 hour.";
+            }
+        ),
+        'end_of_round' => new Card(
+            'End of the round',
+            function(&$state) {
+                return acting_player($state) === 'round';
+            },
+            function(&$state) {
+                $state['round']++;
+                end_turn($state);
+                return "End of the round.";
             }
         ),
     ];
