@@ -63,7 +63,7 @@ class NetworkTest extends TestCase {
         $this->assertEquals('STATE', $statePacket['type']);
         $this->assertEquals(10, $statePacket['data']['wood']);
 
-        send_message("Testing", [$this->serverSide]);
+        send_messages(["Testing"], [$this->serverSide]);
         $msgPacket = json_decode(trim(socket_read($this->clientSide, 1024)), true);
         $this->assertEquals('MESSAGE', $msgPacket['type']);
         $this->assertEquals("Testing", $msgPacket['data']);

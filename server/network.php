@@ -47,10 +47,10 @@ function send_cards(array $playable_cards, array $client_sockets) {
     ]);
 }
 
-function send_message(string $message, array $client_sockets) {
+function send_messages(array $event_logs, array $client_sockets) {
     packet_multi_send($client_sockets, [
         'type' => 'MESSAGE',
-        'data' => $message
+        'data' => $event_logs
     ]);
 }
 

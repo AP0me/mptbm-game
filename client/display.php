@@ -107,12 +107,14 @@ function type_write(string $text, int $ms = 30000) {
     echo "\n";
 }
 
-function print_card_response(string $message) {
+function print_card_response(array $messages) {
     $yellow = "\033[33m";
     $white = "\033[37m";
     $reset = "\033[0m";
     $bold = "\033[1m";
 
-    type_write("{$white}{$bold}» $message{$reset}");
-    sleep(1);
+    foreach ($messages as $message) {
+        type_write("{$white}{$bold}» $message{$reset}");
+        sleep(1);
+    }
 }

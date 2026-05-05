@@ -14,7 +14,7 @@ $players = robot_players($robot_socket);
 human_players($state, $server_socket, $players);
 
 $client_socket_list = client_socket_list($players);
-while ($state["status"] === "RUNNING") {
+while ($state['status'] === 'RUNNING') {
     $player = $players[acting_player($state)];
     send_state($state, $client_socket_list);
 
@@ -22,10 +22,9 @@ while ($state["status"] === "RUNNING") {
     send_cards($playable_cards, [$player->client_socket]);
     
     $card = choose_card($player, $playable_cards, $state);
-    $message = $card->play($state);
-    if (is_string($message)) {
-        send_message($message, $client_socket_list);
-    }
+    $card->play($state);
+
+    send_messages($state['event_logs'], $client_socket_list);
 }
 
 send_state($state, $client_socket_list);
