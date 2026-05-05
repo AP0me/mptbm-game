@@ -28,10 +28,11 @@ function playable_cards(array $deck, array $state): array {
             'skip',
             function() { return true; },
             function(&$state) {
+                clear_event_logs($state);
                 end_turn($state);
-                return "Let's see what else is happening.";
+                log_event($state, "Let's see what else is happening.");
             }
-        )
+        ),
     ];
     $playable_cards = array_filter($deck, function ($card) use($state) { return $card->is_playable($state); });
     return count($playable_cards) > 0 ? $playable_cards : $default_card;
