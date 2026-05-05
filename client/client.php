@@ -3,10 +3,19 @@ require_once 'display.php';
 
 function connect_to_server() {
     echo "--- Server Connection ---\n";
-    echo "Address: ";
+    $example_address = "0.0.0.0";
+    echo "Address: (e.g: $example_address)";
     $address = trim(fgets(STDIN));
-    echo "Port: ";
+    $example_port = "8080";
+    echo "Port: (e.g: $example_port)";
     $port = trim(fgets(STDIN));
+
+    if (!filter_var($address, FILTER_VALIDATE_IP)) {
+        $address = $example_address;
+    }
+    if (!ctype_digit($port)) {
+        $port = $example_port;
+    }
 
     // Create Socket
     $socket = @socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
