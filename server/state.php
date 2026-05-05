@@ -29,6 +29,7 @@ function add_energy(array &$state, int $add): bool {
     if (pl_dotkey($state, 'energy') <= 0) {
         $state["$player_key.energy"] = 0;
         remove_players($state, ['anar']);
+        end_turn($state);
         return true;
     }
     $state["$player_key.energy"] = 
