@@ -22,7 +22,7 @@ function end_turn(array &$state) {
     $state['acting_player'] = next_player_key($state);
 }
 
-function add_energy(array &$state, int $add): bool {
+function add_energy(array &$state, int $add, string $death_message = "Player died of exhaustion."): bool {
     $player_key = acting_player($state);
     $state["$player_key.energy"] = $state["$player_key.energy"] ?? 0;
     $state["$player_key.energy"] += $add;
@@ -30,12 +30,13 @@ function add_energy(array &$state, int $add): bool {
         $state["$player_key.energy"] = 0;
         remove_players($state, ['anar']);
         end_turn($state);
+        log_event($state, $death_message);
         return true;
     }
     $state["$player_key.energy"] = 
     pl_dotkey($state, 'energy') > $state["$player_key.max_energy"] ?
-        $state["$player_key.max_energy"] :
-        pl_dotkey($state, 'energy');
+    $state["$player_key.max_energy"] :
+    pl_dotkey($state, 'energy');
     
     return false;
 }
@@ -116,7 +117,8 @@ function time_passes(int $minutes, array &$state) {
         $energy_spent = $energy_spent / 2;
     }
 
-    return add_energy($state, $energy_spent);
+    $pdied = add_energy($state, $energy_spent, "Player died of hunger.");
+    return $pdied;
 }
 
 function pl_dotkey(array $state, string $bare_key) {
@@ -192,10 +194,12 @@ function init_deck(): array {
                 clear_event_logs($state);
                 $loc = pl_dotkey($state, 'location');
                 $pdied = time_passes(30, $state);
-                if($pdied) { log_event($state, "Player died of hunger."); return; }
+                if($pdied) return;
+
                 $cooked = ($state["$loc.fire_minutes"] ?? 0) > 0 ? 50 : 20;
                 $pdied = add_energy($state, $cooked);
-                if($pdied) { log_event($state, "Player died of overeating."); return; }
+                if($pdied) return;
+                
                 add_food($state, -15);
                 
                 $message = $cooked > 20 ? "The player ate a cooked meal." : "The player ate raw food.";
@@ -214,9 +218,9 @@ function init_deck(): array {
                 $yield = $is_day ? 12 : 3;
                 add_food($state, $yield);
                 $pdied = add_energy($state, -10);
-                if($pdied) { log_event($state, "Player died of exhaustion."); return; }
+                if($pdied) return;
                 $pdied = time_passes(60, $state);
-                if($pdied) { log_event($state, "Player died of hunger."); return; }
+                if($pdied) return;
 
                 $message = $is_day ?
                 "The daytime hunt was highly productive." :
@@ -236,11 +240,12 @@ function init_deck(): array {
             function(&$state) {
                 clear_event_logs($state);
                 $pdied = add_energy($state, -5);
-                if($pdied) { log_event($state, "Player died of exhaustion."); return; }
+                if($pdied) return;
+
                 $has_light = light_level($state) > 3;
                 add_wood($state, ($has_light ? 5 : 3));
                 $pdied = time_passes(60, $state);
-                if($pdied) { log_event($state, "Player died of hunger."); return; }
+                if($pdied) return;
 
                 $message = $has_light ?
                 "The player foraged for wood." :
@@ -263,9 +268,9 @@ function init_deck(): array {
                 $loc = pl_dotkey($state, 'location');
 
                 $pdied = add_energy($state, -45);
-                if($pdied) { log_event($state, "Player died of exhaustion."); return; }
+                if($pdied) return;
                 $pdied = time_passes(60, $state);
-                if($pdied) { log_event($state, "Player died of hunger."); return; }
+                if($pdied) return;
 
                 $state["$loc.shelter"] = true;
                 add_wood($state, -50);
@@ -288,9 +293,9 @@ function init_deck(): array {
                 $loc = pl_dotkey($state, 'location');
 
                 $pdied = add_energy($state, -45);
-                if($pdied) { log_event($state, "Player died of exhaustion."); return; }
+                if($pdied) return;
                 $pdied = time_passes(60, $state);
-                if($pdied) { log_event($state, "Player died of hunger."); return; }
+                if($pdied) return;
 
                 $state["$loc.boat"] = true;
                 add_wood($state, -250);
@@ -314,7 +319,7 @@ function init_deck(): array {
                 $yield = $lucky ? 12 : 3;
                 add_food($state, $yield);
                 $pdied = time_passes(60, $state);
-                if($pdied) { log_event($state, "Player died of hunger."); return; }
+                if($pdied) return;
                 
                 if (sun_light_level($state) > 6 && !isset($state['bottle_map'])) {
                     $state['bottle_map'] = true;
@@ -345,9 +350,9 @@ function init_deck(): array {
                 if (($state["$loc.fire_minutes"] ?? 0) <= 0) {
                     $from_scratch = true;
                     $pdied = add_energy($state, -45);
-                    if($pdied) { log_event($state, "Player died of exhaustion."); return; };
+                    if($pdied) return;
                     $pdied = time_passes(60, $state);
-                    if($pdied) { log_event($state, "Player died of hunger."); return; };
+                    if($pdied) return;
                 }
 
                 $current_wood = $state["$loc.wood"] ?? 0;
@@ -404,9 +409,9 @@ function init_deck(): array {
                 $has_fire = ($state["$loc.fire_minutes"] ?? 0) > 0;
                 
                 $pdied = time_passes(8 * 60, $state);
-                if($pdied) log_event($state, "Player died of hunger.");
+                if($pdied) return;
                 $pdied = add_energy($state, $has_fire ? 70 : 60);
-                if($pdied) log_event($state, "Player died of exhaustion.");
+                if($pdied) return;
                 unset($state['sleeping']);
 
                 $message = $has_fire ?
@@ -422,7 +427,7 @@ function init_deck(): array {
             function(&$state) {
                 clear_event_logs($state);
                 $pdied = time_passes(60, $state);
-                if($pdied) { log_event($state, "Player died of hunger."); return; };
+                if($pdied) return;
 
                 log_event($state, "Player does nothing for 1 hour.");
             }
