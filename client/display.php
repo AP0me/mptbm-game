@@ -24,7 +24,12 @@ function print_state(array $state) {
     echo "{$bold}{$cyan}║" . center_text("~ GAME STATE ~", $box_width) . "║{$reset}\n";
     echo "{$cyan}{$bold}╠" . str_repeat("═", $box_width) . "╣{$reset}\n";
 
+    $invisible_keys = $state['invisible_keys'] ?? [];
     foreach ($state as $key => $value) {
+        if (in_array($key, $invisible_keys)) {
+            continue;
+        }
+
         $value_str = json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         if (mb_strlen($value_str) > 45) {
             $value_str = mb_substr($value_str, 0, 42) . '...';

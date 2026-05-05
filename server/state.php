@@ -110,7 +110,7 @@ function time_passes(int $minutes, array &$state) {
 
     $loc = pl_dotkey($state, 'location');
     $energy_spent = round(-10 * ($minutes / 60));
-    if ($state['sleeping'] ?? false) {
+    if (pl_dotkey($state, 'sleeping') ?? false) {
         $energy_spent = $energy_spent / 5;
     }
     if ($state["$loc.shelter"] ?? false) {
@@ -142,6 +142,7 @@ function init_state(): array {
     $state = [
         'status' => 'RUNNING',
         'event_logs' => [],
+        'invisible_keys' => ['invisible_keys', 'event_logs'],
         'round' => 1,
         'player_order' => array_values(array_merge(human_keys(), ['round'])),
         'acting_player' => human_keys()[0],
@@ -153,6 +154,7 @@ function init_state(): array {
         $state["$human_key.location"] = 'forest';
         $state["$human_key.max_energy"] = 100;
         $state["$human_key.energy"] = 100;
+        $state["invisible_keys"][] = "$human_key.sleeping";
     }
 
     return $state;
@@ -405,14 +407,15 @@ function init_deck(): array {
             function(&$state) {
                 clear_event_logs($state);
                 $loc = pl_dotkey($state, 'location');
-                $state['sleeping'] = true;
+                $player_key = acting_player($state);
+                $state["$player_key.sleeping"] = true;
                 $has_fire = ($state["$loc.fire_minutes"] ?? 0) > 0;
                 
                 $pdied = time_passes(8 * 60, $state);
                 if($pdied) return;
                 $pdied = add_energy($state, $has_fire ? 70 : 60);
                 if($pdied) return;
-                unset($state['sleeping']);
+                unset($state["$player_key.sleeping"]);
 
                 $message = $has_fire ?
                 "The player slept in warmth." :

@@ -120,7 +120,8 @@ class StateTest extends TestCase {
         $this->assertEquals(85, $state['anar.energy']);
 
         // Sleep divides by 5 (-2 energy)
-        $state['sleeping'] = true;
+        $player_key = acting_player($state);
+        $state["$player_key.sleeping"] = true;
         unset($state['shelter']);
         time_passes(60, $state);
         $this->assertEquals(83, $state['anar.energy']);
