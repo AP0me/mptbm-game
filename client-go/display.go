@@ -108,7 +108,7 @@ func PrintCards(cards map[string]interface{}) {
 
 		// Line Content: 14 placeholders, 14 variables
 		// 1(%s) 2(%s) ║ 3(%s) 4(%s) 5(%s) 6(%s) : 7(%s) 8(%s) 9(%s) 10(%s) 11(%s) 12(%s) 13(%s) ║ 14(%s)
-		fmt.Printf("%s%s║%s %s%s%s: %s%s%s%s %s%s%s║%s\n",
+		fmt.Printf("%s%s║%s %s%s%s: %s%s%s%s %s%s%s ║%s\n",
 			Magenta, Bold, Reset,    // 1, 2, 3
 			Bold, Yellow, key,       // 4, 5, 6
 			Bold, Cyan, name, Reset, // 7, 8, 9, 10
