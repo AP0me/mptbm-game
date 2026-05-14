@@ -97,3 +97,60 @@ func InitState() *GameState {
 		},
 	}
 }
+
+func InitRobots() map[string]*Player {
+	return map[string]*Player{
+		"round": {
+			Name: "round",
+			Decide: func(s *GameState) string {
+				return RobotInput("end_of_round")
+			},
+		},
+	};
+}
+
+func InitDeck(s *GameState) map[string]*Card {
+	deck := make(map[string]*Card)
+
+	deck["skip"] = &Card{
+		Name: "Skip",
+		Conditions: func(state *GameState) bool { return true },
+		Action: func(state *GameState) {
+			state.EndTurn()
+			state.LogEvent("Let's see what else is happening.")
+		},
+	}
+
+	deck["hunt"] = &Card{
+		Name: "Hunt game",
+		Conditions: func(state *GameState) bool {
+			p := state.GetActingPlayer()
+			return p == "anar" || p == "elshad"
+		},
+		Action: func(state *GameState) {
+			isDay := state.SunLightLevel() > 0
+			yield := 3
+			if isDay { yield = 12 }
+			
+			loc := state.Data[state.GetActingPlayer()+".location"].(string)
+			state.Data[loc+".food"] = state.Data[loc+".food"].(int) + yield
+			
+			if !state.AddEnergy(-10, "Died hunting") {
+				state.TimePasses(60)
+				state.LogEvent("Hunting was completed.")
+			}
+		},
+	}
+    
+    deck["end_of_round"] = &Card{
+        Name: "End of round",
+        Conditions: func(state *GameState) bool { return state.GetActingPlayer() == "round" },
+        Action: func(state *GameState) {
+            state.Data["round"] = state.Data["round"].(int) + 1
+            state.EndTurn()
+            state.LogEvent("End of the round.")
+        },
+    }
+
+	return deck
+}
