@@ -32,7 +32,7 @@ func ConnectToServer() net.Conn {
 		port = "8080"
 	}
 
-	target := fmt.Sprintf("%s:%s", address, port)
+	target := net.JoinHostPort(address, port)
 	fmt.Printf("Attempting to connect to %s...\n", target)
 
 	conn, err := net.Dial("tcp", target)
