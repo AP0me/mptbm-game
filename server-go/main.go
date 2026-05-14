@@ -11,15 +11,9 @@ func main() {
 
 	state := InitState()
 	players := InitRobots()
-	HumanPlayers(state, ln, players)
+	WelcomeHumansToPlayerList(state.Data["player_order"].([]string), ln, players)
 	deck := InitDeck(state)
-
-	conns := []net.Conn{}
-	for _, p := range players {
-		if p.Conn != nil {
-			conns = append(conns, p.Conn)
-		}
-	}
+	conns := PlayerConnections(players)
 
 	for state.Data["status"] == "RUNNING" {
 		acting_name := state.GetActingPlayer()

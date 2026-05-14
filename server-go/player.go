@@ -26,9 +26,7 @@ func RobotInput(val string) string {
 	return val
 }
 
-func HumanPlayers(state *GameState, ln net.Listener, players map[string]*Player) {
-	playerOrder := state.Data["player_order"].([]string)
-	
+func WelcomeHumansToPlayerList(playerOrder []string, ln net.Listener, players map[string]*Player) {
 	for {
 		remaining := []string{}
 		for _, name := range playerOrder {
@@ -56,4 +54,14 @@ func HumanPlayers(state *GameState, ln net.Listener, players map[string]*Player)
 		}
 		fmt.Printf("[Server] Player %s connected.\n", name)
 	}
+}
+
+func PlayerConnections(players map[string]*Player) []net.Conn {
+	conns := []net.Conn{}
+	for _, p := range players {
+		if p.Conn != nil {
+			conns = append(conns, p.Conn)
+		}
+	}
+	return conns
 }
