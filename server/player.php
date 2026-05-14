@@ -41,7 +41,7 @@ class Player {
     }
 }
 
-function human_players(array $state, Socket $server_socket, array &$players): array | false {
+function human_players(array $state, Socket $server_socket, array &$players) {
     $required_players = array_values(array_diff($state['player_order'], array_values(array_keys($players))));
     while (count($required_players) > 0) {
         $client_socket = socket_accept($server_socket);
@@ -58,8 +58,6 @@ function human_players(array $state, Socket $server_socket, array &$players): ar
         
         $required_players = array_values(array_diff($state['player_order'], array_values(array_keys($players))));
     };
-
-    return $players;
 }
 
 function choose_card(Player $player, array $playable_cards, array $state): Card {
