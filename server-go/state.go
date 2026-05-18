@@ -25,6 +25,13 @@ func getString(state *GameState, key string) string {
 	return ""
 }
 
+func getStringList(state *GameState, key string) []string {
+	if val, ok := state.Data[key].([]string); ok {
+		return val
+	}
+	return []string{}
+}
+
 func getBool(state *GameState, key string) bool {
 	if val, ok := state.Data[key].(bool); ok {
 		return val
@@ -56,7 +63,7 @@ func (s *GameState) PropedSet(key string, val int) {
 }
 
 func (s *GameState) GetActingPlayer() string {
-	return s.Data["acting_player"].(string)
+	return getString(s, "acting_player")
 }
 
 func (s *GameState) PlayerDotKey(key string) string {
@@ -70,12 +77,12 @@ func (s *GameState) LocalDotKey(key string) string {
 }
 
 func (s *GameState) LogEvent(msg string) {
-	logs := s.Data["event_logs"].([]string)
+	logs := getStringList(s, "event_logs")
 	s.Data["event_logs"] = append(logs, msg)
 }
 
 func (s *GameState) EndTurn() {
-	order := s.Data["player_order"].([]string)
+	order := getStringList(s, "player_order")
 	current := s.GetActingPlayer()
 	nextIdx := 0
 	for i, name := range order {
@@ -88,8 +95,7 @@ func (s *GameState) EndTurn() {
 }
 
 func (s *GameState) RemovePlayers(playerKeys []string) {
-	order, ok := s.Data["player_order"].([]string)
-	if !ok { return };
+	order := getStringList(s, "player_order")
 
 	var newOrder []string
 	for _, player := range order {
@@ -124,7 +130,7 @@ func (s *GameState) AddEnergy(amount int, deathMsg string) bool {
 }
 
 func (s *GameState) SunLightLevel() int {
-	t, _ := time.Parse("2006-01-02 15:04:05", s.Data["date_time"].(string))
+	t, _ := time.Parse("2006-01-02 15:04:05", getString(s, "date_time"))
 	hour := t.Hour()
 	
 	// Simplified sun logic: Peak at 12:00, 0 at night
@@ -148,7 +154,7 @@ func (s *GameState) LightLevel() int {
 }
 
 func (s *GameState) TimePasses(minutes int) bool {
-	t, _ := time.Parse("2006-01-02 15:04:05", s.Data["date_time"].(string))
+	t, _ := time.Parse("2006-01-02 15:04:05", getString(s, "date_time"))
 	newTime := t.Add(time.Duration(minutes) * time.Minute)
 	s.Data["date_time"] = newTime.Format("2006-01-02 15:04:05")
 
