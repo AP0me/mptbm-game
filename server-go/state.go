@@ -64,10 +64,9 @@ func (s *GameState) EndTurn() {
 
 func (s *GameState) AddEnergy(amount int, deathMsg string) bool {
 	key := s.PlayerDotKey("energy")
-	maxKey := s.PlayerDotKey("max_energy")
 	
-	current := s.Data[key].(int)
-	max := s.Data[maxKey].(int)
+	current := getInt(s, key)
+	max := getInt(s, s.PlayerDotKey("max_energy"))
 	
 	newVal := current + amount
 	if newVal <= 0 {
@@ -100,12 +99,11 @@ func (s *GameState) SunLightLevel() int {
 
 func (s *GameState) LightLevel() int {
 	loc := getString(s, s.PlayerDotKey("location"))
-
 	sunLightLevel := s.SunLightLevel()
 
 	fire_light_level := 0
-	if (s.Data[loc + ".fire_minutes"].(int) > 0) {
-		fire_light_level = 4;
+	if getInt(s, loc+".fire_minutes") > 0 {
+		fire_light_level = 4
 	}
 
 	return sunLightLevel + fire_light_level
@@ -153,7 +151,7 @@ func InitRobots() map[string]*Player {
 				return RobotInput("end_of_round")
 			},
 		},
-	};
+	}
 }
 
 func InitDeck(s *GameState) map[string]*Card {
@@ -170,14 +168,12 @@ func InitDeck(s *GameState) map[string]*Card {
 		"eat": {
 			Name: "Eat 10 food",
 			Conditions: func(state *GameState) bool {
-				p := state.GetActingPlayer()
-				loc := getString(state, p+".location")
-				return isHuman(p) && getInt(state, loc+".food") > 0
+				loc := getString(state, state.PlayerDotKey("location"))
+				return isHuman(state.GetActingPlayer()) && getInt(state, loc+".food") > 0
 			},
 			Action: func(state *GameState) {
 				state.ClearEventLogs()
-				p := state.GetActingPlayer()
-				loc := getString(state, p+".location")
+				loc := getString(state, state.PlayerDotKey("location"))
 
 				if state.TimePasses(30) {
 					return
@@ -214,8 +210,7 @@ func InitDeck(s *GameState) map[string]*Card {
 					yield = 12
 				}
 
-				p := state.GetActingPlayer()
-				loc := getString(state, p+".location")
+				loc := getString(state, state.PlayerDotKey("location"))
 				state.Data[loc+".food"] = getInt(state, loc+".food") + yield
 
 				if state.AddEnergy(-10, "Died hunting") {
@@ -235,8 +230,7 @@ func InitDeck(s *GameState) map[string]*Card {
 		"wood": {
 			Name: "Collect wood",
 			Conditions: func(state *GameState) bool {
-				p := state.GetActingPlayer()
-				return isHuman(p) && getInt(state, p+".energy") > 5
+				return isHuman(state.GetActingPlayer()) && getInt(state, state.PlayerDotKey("energy")) > 5
 			},
 			Action: func(state *GameState) {
 				state.ClearEventLogs()
@@ -244,8 +238,7 @@ func InitDeck(s *GameState) map[string]*Card {
 					return
 				}
 
-				p := state.GetActingPlayer()
-				loc := getString(state, p+".location")
+				loc := getString(state, state.PlayerDotKey("location"))
 
 				hasLight := state.LightLevel() > 3
 				yield := 3
@@ -269,14 +262,12 @@ func InitDeck(s *GameState) map[string]*Card {
 		"shelter": {
 			Name: "Build a shelter (50 wood)",
 			Conditions: func(state *GameState) bool {
-				p := state.GetActingPlayer()
-				loc := getString(state, p+".location")
-				return isHuman(p) && getInt(state, loc+".wood") >= 50
+				loc := getString(state, state.PlayerDotKey("location"))
+				return isHuman(state.GetActingPlayer()) && getInt(state, loc+".wood") >= 50
 			},
 			Action: func(state *GameState) {
 				state.ClearEventLogs()
-				p := state.GetActingPlayer()
-				loc := getString(state, p+".location")
+				loc := getString(state, state.PlayerDotKey("location"))
 
 				if state.AddEnergy(-45, "Died building shelter") {
 					return
@@ -294,14 +285,12 @@ func InitDeck(s *GameState) map[string]*Card {
 		"boat": {
 			Name: "Build a boat (250 wood)",
 			Conditions: func(state *GameState) bool {
-				p := state.GetActingPlayer()
-				loc := getString(state, p+".location")
-				return isHuman(p) && getInt(state, loc+".wood") >= 250
+				loc := getString(state, state.PlayerDotKey("location"))
+				return isHuman(state.GetActingPlayer()) && getInt(state, loc+".wood") >= 250
 			},
 			Action: func(state *GameState) {
 				state.ClearEventLogs()
-				p := state.GetActingPlayer()
-				loc := getString(state, p+".location")
+				loc := getString(state, state.PlayerDotKey("location"))
 
 				if state.AddEnergy(-45, "Died building boat") {
 					return
@@ -319,9 +308,8 @@ func InitDeck(s *GameState) map[string]*Card {
 		"fish": {
 			Name: "Go fishing",
 			Conditions: func(state *GameState) bool {
-				p := state.GetActingPlayer()
-				loc := getString(state, p+".location")
-				return isHuman(p) && getBool(state, loc+".boat")
+				loc := getString(state, state.PlayerDotKey("location"))
+				return isHuman(state.GetActingPlayer()) && getBool(state, loc+".boat")
 			},
 			Action: func(state *GameState) {
 				state.ClearEventLogs()
@@ -331,8 +319,7 @@ func InitDeck(s *GameState) map[string]*Card {
 					yield = 12
 				}
 
-				p := state.GetActingPlayer()
-				loc := getString(state, p+".location")
+				loc := getString(state, state.PlayerDotKey("location"))
 				state.Data[loc+".food"] = getInt(state, loc+".food") + yield
 
 				if state.TimePasses(60) {
@@ -355,14 +342,12 @@ func InitDeck(s *GameState) map[string]*Card {
 		"fire": {
 			Name: "Make fire (up to 10 wood)",
 			Conditions: func(state *GameState) bool {
-				p := state.GetActingPlayer()
-				loc := getString(state, p+".location")
-				return isHuman(p) && getInt(state, loc+".wood") > 0
+				loc := getString(state, state.PlayerDotKey("location"))
+				return isHuman(state.GetActingPlayer()) && getInt(state, loc+".wood") > 0
 			},
 			Action: func(state *GameState) {
 				state.ClearEventLogs()
-				p := state.GetActingPlayer()
-				loc := getString(state, p+".location")
+				loc := getString(state, state.PlayerDotKey("location"))
 				fromScratch := false
 
 				if getInt(state, loc+".fire_minutes") <= 0 {
@@ -381,7 +366,6 @@ func InitDeck(s *GameState) map[string]*Card {
 					woodToBurn = 10
 				}
 
-				// 60 * 1.5 = 90. Multiplying directly bypasses the need for float rounding math.
 				burnMinutes := woodToBurn * 90
 				state.Data[loc+".fire_minutes"] = getInt(state, loc+".fire_minutes") + burnMinutes
 				state.Data[loc+".wood"] = currentWood - woodToBurn
@@ -396,12 +380,10 @@ func InitDeck(s *GameState) map[string]*Card {
 		"follow_the_map": {
 			Name: "Follow the map the player fished out.",
 			Conditions: func(state *GameState) bool {
-				p := state.GetActingPlayer()
-				return isHuman(p) && getBool(state, "bottle_map")
+				return isHuman(state.GetActingPlayer()) && getBool(state, "bottle_map")
 			},
 			Action: func(state *GameState) {
-				p := state.GetActingPlayer()
-				loc := getString(state, p+".location")
+				loc := getString(state, state.PlayerDotKey("location"))
 
 				food := getInt(state, loc+".food")
 				wood := getInt(state, loc+".wood")
@@ -412,7 +394,7 @@ func InitDeck(s *GameState) map[string]*Card {
 				state.Data[loc+".fire_minutes"] = fire - 60
 
 				newLoc := "caves"
-				state.Data[p+".location"] = newLoc
+				state.Data[state.PlayerDotKey("location")] = newLoc
 
 				state.Data[newLoc+".food"] = getInt(state, newLoc+".food") + food
 				state.Data[newLoc+".wood"] = getInt(state, newLoc+".wood") + wood
@@ -424,15 +406,13 @@ func InitDeck(s *GameState) map[string]*Card {
 		"sleep": {
 			Name: "Sleep 8 hours",
 			Conditions: func(state *GameState) bool {
-				p := state.GetActingPlayer()
-				return isHuman(p) && state.SunLightLevel() <= 0
+				return isHuman(state.GetActingPlayer()) && state.SunLightLevel() <= 0
 			},
 			Action: func(state *GameState) {
 				state.ClearEventLogs()
-				p := state.GetActingPlayer()
-				loc := getString(state, p+".location")
+				loc := getString(state, state.PlayerDotKey("location"))
 
-				state.Data[p+".sleeping"] = true
+				state.Data[state.PlayerDotKey("sleeping")] = true
 				hasFire := getInt(state, loc+".fire_minutes") > 0
 
 				if state.TimePasses(8 * 60) {
@@ -448,7 +428,7 @@ func InitDeck(s *GameState) map[string]*Card {
 					return
 				}
 
-				delete(state.Data, p+".sleeping")
+				delete(state.Data, state.PlayerDotKey("sleeping"))
 
 				message := "The player slept in the cold."
 				if hasFire {
