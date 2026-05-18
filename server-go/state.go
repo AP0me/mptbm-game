@@ -35,6 +35,13 @@ type GameState struct {
 	Data map[string]interface{}
 }
 
+func (s *GameState) PropedSet(key string, val int) {
+	if val < 0 {
+		val = 0
+	}
+	s.Data[key] = val
+}
+
 func (s *GameState) GetActingPlayer() string {
 	return s.Data["acting_player"].(string)
 }
@@ -70,7 +77,7 @@ func (s *GameState) AddEnergy(amount int, deathMsg string) bool {
 	
 	newVal := current + amount
 	if newVal <= 0 {
-		s.Data[key] = 0
+		s.PropedSet(key, 0)
 		s.LogEvent(deathMsg)
 		// Logic to remove player would go here
 		s.EndTurn()
@@ -80,7 +87,7 @@ func (s *GameState) AddEnergy(amount int, deathMsg string) bool {
 	if newVal > max {
 		newVal = max
 	}
-	s.Data[key] = newVal
+	s.PropedSet(key, newVal)
 	return false
 }
 
@@ -188,7 +195,7 @@ func InitDeck(s *GameState) map[string]*Card {
 					return
 				}
 
-				state.Data[loc+".food"] = getInt(state, loc+".food") - 15
+				state.PropedSet(loc+".food", getInt(state, loc+".food") - 15)
 
 				message := "The player ate raw food."
 				if cooked > 20 {
@@ -211,7 +218,7 @@ func InitDeck(s *GameState) map[string]*Card {
 				}
 
 				loc := getString(state, state.PlayerDotKey("location"))
-				state.Data[loc+".food"] = getInt(state, loc+".food") + yield
+				state.PropedSet(loc+".food", getInt(state, loc+".food") + yield)
 
 				if state.AddEnergy(-10, "Died hunting") {
 					return
@@ -246,7 +253,7 @@ func InitDeck(s *GameState) map[string]*Card {
 					yield = 5
 				}
 
-				state.Data[loc+".wood"] = getInt(state, loc+".wood") + yield
+				state.PropedSet(loc+".wood", getInt(state, loc+".wood") + yield)
 
 				if state.TimePasses(60) {
 					return
@@ -277,7 +284,7 @@ func InitDeck(s *GameState) map[string]*Card {
 				}
 
 				state.Data[loc+".shelter"] = true
-				state.Data[loc+".wood"] = getInt(state, loc+".wood") - 50
+				state.PropedSet(loc+".wood", getInt(state, loc+".wood") - 50)
 
 				state.LogEvent("The player built a shelter.")
 			},
@@ -300,7 +307,7 @@ func InitDeck(s *GameState) map[string]*Card {
 				}
 
 				state.Data[loc+".boat"] = true
-				state.Data[loc+".wood"] = getInt(state, loc+".wood") - 250
+				state.PropedSet(loc+".wood", getInt(state, loc+".wood") - 250)
 
 				state.LogEvent("The player built a boat.")
 			},
@@ -320,7 +327,7 @@ func InitDeck(s *GameState) map[string]*Card {
 				}
 
 				loc := getString(state, state.PlayerDotKey("location"))
-				state.Data[loc+".food"] = getInt(state, loc+".food") + yield
+				state.PropedSet(loc+".food", getInt(state, loc+".food") + yield)
 
 				if state.TimePasses(60) {
 					return
@@ -367,8 +374,8 @@ func InitDeck(s *GameState) map[string]*Card {
 				}
 
 				burnMinutes := woodToBurn * 90
-				state.Data[loc+".fire_minutes"] = getInt(state, loc+".fire_minutes") + burnMinutes
-				state.Data[loc+".wood"] = currentWood - woodToBurn
+				state.PropedSet(loc+".fire_minutes", getInt(state, loc+".fire_minutes") + burnMinutes)
+				state.PropedSet(loc+".wood", currentWood - woodToBurn)
 
 				message := "The player stokes the fire with more wood."
 				if fromScratch {
@@ -389,16 +396,16 @@ func InitDeck(s *GameState) map[string]*Card {
 				wood := getInt(state, loc+".wood")
 				fire := getInt(state, loc+".fire_minutes")
 
-				state.Data[loc+".food"] = food - 10
-				state.Data[loc+".wood"] = wood - 10
-				state.Data[loc+".fire_minutes"] = fire - 60
+				state.PropedSet(loc+".food", food - 10)
+				state.PropedSet(loc+".wood", wood - 10)
+				state.PropedSet(loc+".fire_minutes", fire - 60)
 
 				newLoc := "caves"
 				state.Data[state.PlayerDotKey("location")] = newLoc
 
-				state.Data[newLoc+".food"] = getInt(state, newLoc+".food") + food
-				state.Data[newLoc+".wood"] = getInt(state, newLoc+".wood") + wood
-				state.Data[newLoc+".fire_minutes"] = getInt(state, newLoc+".fire_minutes") + fire
+				state.PropedSet(newLoc+".food", getInt(state, newLoc+".food") + food)
+				state.PropedSet(newLoc+".wood", getInt(state, newLoc+".wood") + wood)
+				state.PropedSet(newLoc+".fire_minutes", getInt(state, newLoc+".fire_minutes") + fire)
 
 				state.LogEvent("The player enters the caves with all the supplies they could carry.")
 			},
@@ -457,7 +464,7 @@ func InitDeck(s *GameState) map[string]*Card {
 			},
 			Action: func(state *GameState) {
 				state.ClearEventLogs()
-				state.Data["round"] = getInt(state, "round") + 1
+				state.PropedSet("round", getInt(state, "round") + 1)
 				state.EndTurn()
 				state.LogEvent("End of the round.")
 			},
