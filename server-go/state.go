@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+type GameState struct {
+	Data map[string]interface{}
+}
+
 func getInt (state *GameState, key string) int {
 	if val, ok := state.Data[key].(int); ok {
 		return val
@@ -34,10 +38,6 @@ func humanKeys () []string {
 
 func isHuman (p string) bool {
 	return slices.Contains(humanKeys(), p)
-}
-
-type GameState struct {
-	Data map[string]interface{}
 }
 
 func (s *GameState) PropedSet(key string, val int) {
