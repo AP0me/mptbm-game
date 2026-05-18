@@ -3,6 +3,7 @@ package main
 import (
 	"math"
 	"math/rand"
+	"slices"
 	"time"
 )
 
@@ -69,6 +70,20 @@ func (s *GameState) EndTurn() {
 	s.Data["acting_player"] = order[nextIdx]
 }
 
+func (s *GameState) RemovePlayers(playerKeys []string) {
+	order, ok := s.Data["player_order"].([]string)
+	if !ok { return };
+
+	var newOrder []string
+	for _, player := range order {
+		if slices.Contains(playerKeys, player) {
+			newOrder = append(newOrder, player)
+		}
+	}
+
+	s.Data["player_order"] = newOrder
+}
+
 func (s *GameState) AddEnergy(amount int, deathMsg string) bool {
 	key := s.PlayerDotKey("energy")
 	
@@ -79,7 +94,7 @@ func (s *GameState) AddEnergy(amount int, deathMsg string) bool {
 	if newVal <= 0 {
 		s.PropedSet(key, 0)
 		s.LogEvent(deathMsg)
-		// Logic to remove player would go here
+		s.RemovePlayers([]string{s.GetActingPlayer()})
 		s.EndTurn()
 		return true
 	}
