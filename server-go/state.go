@@ -11,14 +11,14 @@ type GameState struct {
 	Data map[string]interface{}
 }
 
-func getInt (state *GameState, key string) int {
+func getInt(state *GameState, key string) int {
 	if val, ok := state.Data[key].(int); ok {
 		return val
 	}
 	return 0
 }
 
-func getString (state *GameState, key string) string {
+func getString(state *GameState, key string) string {
 	if val, ok := state.Data[key].(string); ok {
 		return val
 	}
@@ -32,11 +32,19 @@ func getBool (state *GameState, key string) bool {
 	return false
 }
 
-func humanKeys () []string {
+func humanKeys() []string {
 	return []string{"anar", "elshad"}
 }
 
-func isHuman (p string) bool {
+func robotKeys() []string {
+	keys := []string{}
+	for k := range InitRobots() {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func isHuman(p string) bool {
 	return slices.Contains(humanKeys(), p)
 }
 
@@ -188,7 +196,7 @@ func InitState() *GameState {
 			"event_logs":    []string{},
 			"invisible_keys": []string{"invisible_keys", "event_logs"},
 			"round":         1,
-			"player_order":  slices.Concat(humanKeys(), []string{"round"}),
+			"player_order":  slices.Concat(humanKeys(), robotKeys()),
 			"acting_player": "anar",
 			"date_time":     time.Now().Format("2006-01-02 00:00:00"),
 			"anar.location": "forest",
