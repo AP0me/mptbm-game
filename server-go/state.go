@@ -25,7 +25,7 @@ func getString(state *GameState, key string) string {
 	return ""
 }
 
-func getBool (state *GameState, key string) bool {
+func getBool(state *GameState, key string) bool {
 	if val, ok := state.Data[key].(bool); ok {
 		return val
 	}
