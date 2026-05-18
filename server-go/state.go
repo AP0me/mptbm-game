@@ -6,6 +6,31 @@ import (
 	"time"
 )
 
+func getInt (state *GameState, key string) int {
+	if val, ok := state.Data[key].(int); ok {
+		return val
+	}
+	return 0
+}
+
+func getString (state *GameState, key string) string {
+	if val, ok := state.Data[key].(string); ok {
+		return val
+	}
+	return ""
+}
+
+func getBool (state *GameState, key string) bool {
+	if val, ok := state.Data[key].(bool); ok {
+		return val
+	}
+	return false
+}
+
+func isHuman (p string) bool {
+	return p == "anar" || p == "elshad"
+}
+
 type GameState struct {
 	Data map[string]interface{}
 }
@@ -14,10 +39,9 @@ func (s *GameState) GetActingPlayer() string {
 	return s.Data["acting_player"].(string)
 }
 
-func (s *GameState) PlDotKey(key string) interface{} {
+func (s *GameState) PlayerDotKey(key string) string {
 	p := s.GetActingPlayer()
-	plKey := p + "." + key
-	return s.Data[plKey]
+	return p + "." + key
 }
 
 func (s *GameState) LogEvent(msg string) {
@@ -39,9 +63,8 @@ func (s *GameState) EndTurn() {
 }
 
 func (s *GameState) AddEnergy(amount int, deathMsg string) bool {
-	p := s.GetActingPlayer()
-	key := p + ".energy"
-	maxKey := p + ".max_energy"
+	key := s.PlayerDotKey("energy")
+	maxKey := s.PlayerDotKey("max_energy")
 	
 	current := s.Data[key].(int)
 	max := s.Data[maxKey].(int)
@@ -76,9 +99,7 @@ func (s *GameState) SunLightLevel() int {
 }
 
 func (s *GameState) LightLevel() int {
-	p := s.GetActingPlayer()
-	locKey := p + ".location"
-	loc := s.Data[locKey].(string)
+	loc := getString(s, s.PlayerDotKey("location"))
 
 	sunLightLevel := s.SunLightLevel()
 
@@ -135,34 +156,7 @@ func InitRobots() map[string]*Player {
 	};
 }
 
-// InitDeck initializes and returns the game deck map.
 func InitDeck(s *GameState) map[string]*Card {
-	// Reusable type-safe helpers to replicate PHP's dynamic array access & null coalescing
-	getInt := func(state *GameState, key string) int {
-		if val, ok := state.Data[key].(int); ok {
-			return val
-		}
-		return 0
-	}
-
-	getString := func(state *GameState, key string) string {
-		if val, ok := state.Data[key].(string); ok {
-			return val
-		}
-		return ""
-	}
-
-	getBool := func(state *GameState, key string) bool {
-		if val, ok := state.Data[key].(bool); ok {
-			return val
-		}
-		return false
-	}
-
-	isHuman := func(p string) bool {
-		return p == "anar" || p == "elshad"
-	}
-
 	return map[string]*Card{
 		"skip": {
 			Name: "Skip",
