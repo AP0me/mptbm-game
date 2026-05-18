@@ -52,6 +52,11 @@ func (s *GameState) PlayerDotKey(key string) string {
 	return p + "." + key
 }
 
+func (s *GameState) LocalDotKey(key string) string {
+	loc := getString(s, s.PlayerDotKey("location"))
+	return loc + "." + key
+}
+
 func (s *GameState) LogEvent(msg string) {
 	logs := s.Data["event_logs"].([]string)
 	s.Data["event_logs"] = append(logs, msg)
@@ -120,11 +125,10 @@ func (s *GameState) SunLightLevel() int {
 }
 
 func (s *GameState) LightLevel() int {
-	loc := getString(s, s.PlayerDotKey("location"))
 	sunLightLevel := s.SunLightLevel()
 
 	fire_light_level := 0
-	if getInt(s, loc+".fire_minutes") > 0 {
+	if getInt(s, s.LocalDotKey("fire_minutes")) > 0 {
 		fire_light_level = 4
 	}
 
@@ -190,19 +194,17 @@ func InitDeck(s *GameState) map[string]*Card {
 		"eat": {
 			Name: "Eat 10 food",
 			Conditions: func(state *GameState) bool {
-				loc := getString(state, state.PlayerDotKey("location"))
-				return isHuman(state.GetActingPlayer()) && getInt(state, loc+".food") > 0
+				return isHuman(state.GetActingPlayer()) && getInt(state, state.LocalDotKey("food")) > 0
 			},
 			Action: func(state *GameState) {
 				state.ClearEventLogs()
-				loc := getString(state, state.PlayerDotKey("location"))
 
 				if state.TimePasses(30) {
 					return
 				}
 
 				cooked := 20
-				if getInt(state, loc+".fire_minutes") > 0 {
+				if getInt(state, state.LocalDotKey("fire_minutes")) > 0 {
 					cooked = 50
 				}
 
@@ -210,7 +212,7 @@ func InitDeck(s *GameState) map[string]*Card {
 					return
 				}
 
-				state.PropedSet(loc+".food", getInt(state, loc+".food") - 15)
+				state.PropedSet(state.LocalDotKey("food"), getInt(state, state.LocalDotKey("food")) - 15)
 
 				message := "The player ate raw food."
 				if cooked > 20 {
@@ -231,9 +233,7 @@ func InitDeck(s *GameState) map[string]*Card {
 				if isDay {
 					yield = 12
 				}
-
-				loc := getString(state, state.PlayerDotKey("location"))
-				state.PropedSet(loc+".food", getInt(state, loc+".food") + yield)
+				state.PropedSet(state.LocalDotKey("food"), getInt(state, state.LocalDotKey("food")) + yield)
 
 				if state.AddEnergy(-10, "Died hunting") {
 					return
@@ -260,15 +260,13 @@ func InitDeck(s *GameState) map[string]*Card {
 					return
 				}
 
-				loc := getString(state, state.PlayerDotKey("location"))
-
 				hasLight := state.LightLevel() > 3
 				yield := 3
 				if hasLight {
 					yield = 5
 				}
 
-				state.PropedSet(loc+".wood", getInt(state, loc+".wood") + yield)
+				state.PropedSet(state.LocalDotKey("wood"), getInt(state, state.LocalDotKey("wood")) + yield)
 
 				if state.TimePasses(60) {
 					return
@@ -284,12 +282,10 @@ func InitDeck(s *GameState) map[string]*Card {
 		"shelter": {
 			Name: "Build a shelter (50 wood)",
 			Conditions: func(state *GameState) bool {
-				loc := getString(state, state.PlayerDotKey("location"))
-				return isHuman(state.GetActingPlayer()) && getInt(state, loc+".wood") >= 50
+				return isHuman(state.GetActingPlayer()) && getInt(state, state.LocalDotKey("wood")) >= 50
 			},
 			Action: func(state *GameState) {
 				state.ClearEventLogs()
-				loc := getString(state, state.PlayerDotKey("location"))
 
 				if state.AddEnergy(-45, "Died building shelter") {
 					return
@@ -298,8 +294,8 @@ func InitDeck(s *GameState) map[string]*Card {
 					return
 				}
 
-				state.Data[loc+".shelter"] = true
-				state.PropedSet(loc+".wood", getInt(state, loc+".wood") - 50)
+				state.Data[state.LocalDotKey("shelter")] = true
+				state.PropedSet(state.LocalDotKey("wood"), getInt(state, state.LocalDotKey("wood")) - 50)
 
 				state.LogEvent("The player built a shelter.")
 			},
@@ -307,12 +303,10 @@ func InitDeck(s *GameState) map[string]*Card {
 		"boat": {
 			Name: "Build a boat (250 wood)",
 			Conditions: func(state *GameState) bool {
-				loc := getString(state, state.PlayerDotKey("location"))
-				return isHuman(state.GetActingPlayer()) && getInt(state, loc+".wood") >= 250
+				return isHuman(state.GetActingPlayer()) && getInt(state, state.LocalDotKey("wood")) >= 250
 			},
 			Action: func(state *GameState) {
 				state.ClearEventLogs()
-				loc := getString(state, state.PlayerDotKey("location"))
 
 				if state.AddEnergy(-45, "Died building boat") {
 					return
@@ -321,8 +315,8 @@ func InitDeck(s *GameState) map[string]*Card {
 					return
 				}
 
-				state.Data[loc+".boat"] = true
-				state.PropedSet(loc+".wood", getInt(state, loc+".wood") - 250)
+				state.Data[state.LocalDotKey("boat")] = true
+				state.PropedSet(state.LocalDotKey("wood"), getInt(state, state.LocalDotKey("wood")) - 250)
 
 				state.LogEvent("The player built a boat.")
 			},
@@ -330,8 +324,7 @@ func InitDeck(s *GameState) map[string]*Card {
 		"fish": {
 			Name: "Go fishing",
 			Conditions: func(state *GameState) bool {
-				loc := getString(state, state.PlayerDotKey("location"))
-				return isHuman(state.GetActingPlayer()) && getBool(state, loc+".boat")
+				return isHuman(state.GetActingPlayer()) && getBool(state, state.LocalDotKey("boat"))
 			},
 			Action: func(state *GameState) {
 				state.ClearEventLogs()
@@ -341,8 +334,7 @@ func InitDeck(s *GameState) map[string]*Card {
 					yield = 12
 				}
 
-				loc := getString(state, state.PlayerDotKey("location"))
-				state.PropedSet(loc+".food", getInt(state, loc+".food") + yield)
+				state.PropedSet(state.LocalDotKey("food"), getInt(state, state.LocalDotKey("food")) + yield)
 
 				if state.TimePasses(60) {
 					return
@@ -364,15 +356,13 @@ func InitDeck(s *GameState) map[string]*Card {
 		"fire": {
 			Name: "Make fire (up to 10 wood)",
 			Conditions: func(state *GameState) bool {
-				loc := getString(state, state.PlayerDotKey("location"))
-				return isHuman(state.GetActingPlayer()) && getInt(state, loc+".wood") > 0
+				return isHuman(state.GetActingPlayer()) && getInt(state, state.LocalDotKey("wood")) > 0
 			},
 			Action: func(state *GameState) {
 				state.ClearEventLogs()
-				loc := getString(state, state.PlayerDotKey("location"))
 				fromScratch := false
 
-				if getInt(state, loc+".fire_minutes") <= 0 {
+				if getInt(state, state.LocalDotKey("fire_minutes")) <= 0 {
 					fromScratch = true
 					if state.AddEnergy(-45, "Died making fire from scratch") {
 						return
@@ -382,15 +372,15 @@ func InitDeck(s *GameState) map[string]*Card {
 					}
 				}
 
-				currentWood := getInt(state, loc+".wood")
+				currentWood := getInt(state, state.LocalDotKey("wood"))
 				woodToBurn := currentWood
 				if woodToBurn > 10 {
 					woodToBurn = 10
 				}
 
 				burnMinutes := woodToBurn * 90
-				state.PropedSet(loc+".fire_minutes", getInt(state, loc+".fire_minutes") + burnMinutes)
-				state.PropedSet(loc+".wood", currentWood - woodToBurn)
+				state.PropedSet(state.LocalDotKey("fire_minutes"), getInt(state, state.LocalDotKey("fire_minutes")) + burnMinutes)
+				state.PropedSet(state.LocalDotKey("wood"), currentWood - woodToBurn)
 
 				message := "The player stokes the fire with more wood."
 				if fromScratch {
@@ -405,15 +395,14 @@ func InitDeck(s *GameState) map[string]*Card {
 				return isHuman(state.GetActingPlayer()) && getBool(state, "bottle_map")
 			},
 			Action: func(state *GameState) {
-				loc := getString(state, state.PlayerDotKey("location"))
 
-				food := getInt(state, loc+".food")
-				wood := getInt(state, loc+".wood")
-				fire := getInt(state, loc+".fire_minutes")
+				food := getInt(state, state.LocalDotKey("food"))
+				wood := getInt(state, state.LocalDotKey("wood"))
+				fire := getInt(state, state.LocalDotKey("fire_minutes"))
 
-				state.PropedSet(loc+".food", food - 10)
-				state.PropedSet(loc+".wood", wood - 10)
-				state.PropedSet(loc+".fire_minutes", fire - 60)
+				state.PropedSet(state.LocalDotKey("food"), food - 10)
+				state.PropedSet(state.LocalDotKey("wood"), wood - 10)
+				state.PropedSet(state.LocalDotKey("fire_minutes"), fire - 60)
 
 				newLoc := "caves"
 				state.Data[state.PlayerDotKey("location")] = newLoc
@@ -432,10 +421,9 @@ func InitDeck(s *GameState) map[string]*Card {
 			},
 			Action: func(state *GameState) {
 				state.ClearEventLogs()
-				loc := getString(state, state.PlayerDotKey("location"))
 
 				state.Data[state.PlayerDotKey("sleeping")] = true
-				hasFire := getInt(state, loc+".fire_minutes") > 0
+				hasFire := getInt(state, state.LocalDotKey("fire_minutes")) > 0
 
 				if state.TimePasses(8 * 60) {
 					return
