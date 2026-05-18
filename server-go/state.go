@@ -76,7 +76,7 @@ func (s *GameState) RemovePlayers(playerKeys []string) {
 
 	var newOrder []string
 	for _, player := range order {
-		if slices.Contains(playerKeys, player) {
+		if !slices.Contains(playerKeys, player) {
 			newOrder = append(newOrder, player)
 		}
 	}
