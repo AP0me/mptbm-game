@@ -28,8 +28,12 @@ func getBool (state *GameState, key string) bool {
 	return false
 }
 
+func humanKeys () []string {
+	return []string{"anar", "elshad"}
+}
+
 func isHuman (p string) bool {
-	return p == "anar" || p == "elshad"
+	return slices.Contains(humanKeys(), p)
 }
 
 type GameState struct {
@@ -140,8 +144,37 @@ func (s *GameState) TimePasses(minutes int) bool {
 	newTime := t.Add(time.Duration(minutes) * time.Minute)
 	s.Data["date_time"] = newTime.Format("2006-01-02 15:04:05")
 
-	energySpent := int(math.Round(-10.0 * (float64(minutes) / 60.0)))
-	return s.AddEnergy(energySpent, "Player died of hunger.")
+	// 2. Decay fires across all human player locations
+	humans := []string{"anar", "elshad"}
+	for _, pKey := range humans {
+		playerLoc := getString(s, pKey+".location")
+		if playerLoc != "" {
+			fireKey := playerLoc + ".fire_minutes"
+			currentFire := getInt(s, fireKey)
+			if currentFire > 0 {
+				newFire := currentFire - minutes
+				if newFire < 0 {
+					newFire = 0
+				}
+				s.PropedSet(fireKey, newFire)
+			}
+		}
+	}
+	baseEnergySpent := -10.0 * (float64(minutes) / 60.0)
+	if getBool(s, s.PlayerDotKey("sleeping")) {
+		baseEnergySpent /= 5.0
+	}
+
+	if getBool(s, s.LocalDotKey("shelter")) {
+		baseEnergySpent /= 2.0
+	}
+
+	if getInt(s, s.LocalDotKey("fire_minutes")) > 0 {
+		baseEnergySpent /= 2.0
+	}
+
+	finalEnergySpent := int(math.Round(baseEnergySpent))
+	return s.AddEnergy(finalEnergySpent, "Player died of hunger.")
 }
 
 func (s *GameState) ClearEventLogs() {
@@ -153,8 +186,9 @@ func InitState() *GameState {
 		Data: map[string]interface{}{
 			"status":        "RUNNING",
 			"event_logs":    []string{},
+			"invisible_keys": []string{"invisible_keys", "event_logs"},
 			"round":         1,
-			"player_order":  []string{"anar", "elshad", "round"},
+			"player_order":  slices.Concat(humanKeys(), []string{"round"}),
 			"acting_player": "anar",
 			"date_time":     time.Now().Format("2006-01-02 00:00:00"),
 			"anar.location": "forest",
@@ -426,15 +460,6 @@ func InitDeck(s *GameState) map[string]*Card {
 				hasFire := getInt(state, state.LocalDotKey("fire_minutes")) > 0
 
 				if state.TimePasses(8 * 60) {
-					return
-				}
-
-				energyGain := 60
-				if hasFire {
-					energyGain = 70
-				}
-
-				if state.AddEnergy(energyGain, "Died sleeping") {
 					return
 				}
 
