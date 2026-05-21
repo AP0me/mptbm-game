@@ -18,9 +18,34 @@ type Card struct {
 	Action     func(state *GameState)
 }
 
-type Mod interface {
-    InitState() *GameState
-    InitDeck(state *GameState) map[string]*Card
-    InitRobots() map[string]*Player
-	GetActingPlayer(s *GameState) string
+func GetInt(state *GameState, key string) int {
+	if val, ok := state.Data[key].(int); ok {
+		return val
+	}
+	return 0
+}
+
+func GetString(state *GameState, key string) string {
+	if val, ok := state.Data[key].(string); ok {
+		return val
+	}
+	return ""
+}
+
+func GetStringList(state *GameState, key string) []string {
+	if val, ok := state.Data[key].([]string); ok {
+		return val
+	}
+	return []string{}
+}
+
+func GetBool(state *GameState, key string) bool {
+	if val, ok := state.Data[key].(bool); ok {
+		return val
+	}
+	return false
+}
+
+func GetActingPlayer(s *GameState) string {
+	return GetString(s, "acting_player")
 }
