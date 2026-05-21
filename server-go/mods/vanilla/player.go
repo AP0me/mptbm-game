@@ -1,21 +1,17 @@
-package main
+package vanilla
 
 import (
 	"bufio"
 	"fmt"
+	"game/server/core"
+	"game/server/mods/shared"
 	"net"
 	"strings"
 	"time"
 )
 
-type Player struct {
-	Name   string
-	Conn   net.Conn
-	Decide func(state *GameState) string
-}
-
 func HumanInput(conn net.Conn) string {
-	SafeSend(conn, map[string]interface{}{}, "CHOICE")
+	core.SafeSend(conn, map[string]interface{}{}, "CHOICE")
 	reader := bufio.NewReader(conn)
 	input, _ := reader.ReadString('\n')
 	return strings.TrimSpace(input)
@@ -48,7 +44,7 @@ func WelcomeHumansToPlayerList(playerOrder []string, ln net.Listener, players ma
 		players[name] = &Player{
 			Name: name,
 			Conn: conn,
-			Decide: func(s *GameState) string {
+			Decide: func(s *shared.GameState) string {
 				return HumanInput(conn)
 			},
 		}

@@ -1,8 +1,9 @@
-package main
+package core
 
 import (
 	"encoding/json"
 	"fmt"
+	"game/server/mods/shared"
 	"net"
 )
 
@@ -32,11 +33,11 @@ func PacketMultiSend(conns []net.Conn, data interface{}, pType string) {
 	}
 }
 
-func SendState(state *GameState, conns []net.Conn) {
+func SendState(state *shared.GameState, conns []net.Conn) {
 	PacketMultiSend(conns, state.Data, "STATE")
 }
 
-func SendCards(playableCards map[string]*Card, conn net.Conn) {
+func SendCards(playableCards map[string]*shared.Card, conn net.Conn) {
 	cardNames := make(map[string]map[string]string)
 	for key, card := range playableCards {
 		cardNames[key] = map[string]string{"name": card.Name}

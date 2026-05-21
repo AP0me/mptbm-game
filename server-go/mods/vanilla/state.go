@@ -1,14 +1,23 @@
-package main
+package vanilla
 
 import (
 	"math"
 	"math/rand"
 	"slices"
 	"time"
+	"net"
 )
 
-type GameState struct {
-	Data map[string]interface{}
+type Player struct {
+	Name   string
+	Conn   net.Conn
+	Decide func(state *GameState) string
+}
+
+type Card struct {
+	Name       string
+	Conditions func(state *GameState) bool
+	Action     func(state *GameState)
 }
 
 func getInt(state *GameState, key string) int {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"game/server/core"
 	"net"
 )
 
@@ -18,18 +19,18 @@ func main() {
 	for state.Data["status"] == "RUNNING" {
 		acting_name := state.GetActingPlayer()
 		player := players[acting_name]
-		SendState(state, conns)
+		core.SendState(state, conns)
 
-		playable_cards := PlayableCards(deck, state)
+		playable_cards := core.PlayableCards(deck, state)
 
 		if player.Conn != nil {
-			SendCards(playable_cards, player.Conn)
+			core.SendCards(playable_cards, player.Conn)
 		}
 
-		card := ChooseCard(player, playable_cards, state)
+		card := core.ChooseCard(player, playable_cards, state)
 		card.Action(state)
 
-		SendMessages(state.Data["event_logs"].([]string), conns)
+		core.SendMessages(state.Data["event_logs"].([]string), conns)
 		state.Data["event_logs"] = []string{}
 	}
 }
