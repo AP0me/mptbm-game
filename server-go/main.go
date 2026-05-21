@@ -11,10 +11,10 @@ func main() {
 	fmt.Println("Server started on :8080")
 
 	state := InitState()
-	players := InitRobots()
-	WelcomeHumansToPlayerList(state.Data["player_order"].([]string), ln, players)
 	deck := InitDeck(state)
-	conns := PlayerConnections(players)
+	players := InitRobots()
+	core.WelcomeHumansToPlayerList(state.Data["player_order"].([]string), ln, players)
+	conns := core.PlayerConnections(players)
 
 	for state.Data["status"] == "RUNNING" {
 		acting_name := state.GetActingPlayer()

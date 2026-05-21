@@ -1,9 +1,8 @@
-package vanilla
+package core
 
 import (
 	"bufio"
 	"fmt"
-	"game/server/core"
 	"game/server/mods/shared"
 	"net"
 	"strings"
@@ -11,7 +10,7 @@ import (
 )
 
 func HumanInput(conn net.Conn) string {
-	core.SafeSend(conn, map[string]interface{}{}, "CHOICE")
+	SafeSend(conn, map[string]interface{}{}, "CHOICE")
 	reader := bufio.NewReader(conn)
 	input, _ := reader.ReadString('\n')
 	return strings.TrimSpace(input)
@@ -22,7 +21,7 @@ func RobotInput(val string) string {
 	return val
 }
 
-func WelcomeHumansToPlayerList(playerOrder []string, ln net.Listener, players map[string]*Player) {
+func WelcomeHumansToPlayerList(playerOrder []string, ln net.Listener, players map[string]*shared.Player) {
 	for {
 		remaining := []string{}
 		for _, name := range playerOrder {
@@ -41,7 +40,7 @@ func WelcomeHumansToPlayerList(playerOrder []string, ln net.Listener, players ma
 		}
 
 		name := remaining[0]
-		players[name] = &Player{
+		players[name] = &shared.Player{
 			Name: name,
 			Conn: conn,
 			Decide: func(s *shared.GameState) string {
@@ -52,7 +51,7 @@ func WelcomeHumansToPlayerList(playerOrder []string, ln net.Listener, players ma
 	}
 }
 
-func PlayerConnections(players map[string]*Player) []net.Conn {
+func PlayerConnections(players map[string]*shared.Player) []net.Conn {
 	conns := []net.Conn{}
 	for _, p := range players {
 		if p.Conn != nil {

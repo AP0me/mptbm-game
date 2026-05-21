@@ -1,25 +1,13 @@
 package vanilla
 
 import (
+	"game/server/core"
 	"game/server/mods/shared"
 	"math"
 	"math/rand"
-	"net"
 	"slices"
 	"time"
 )
-
-type Player struct {
-	Name   string
-	Conn   net.Conn
-	Decide func(state *shared.GameState) string
-}
-
-type Card struct {
-	Name       string
-	Conditions func(state *shared.GameState) bool
-	Action     func(state *shared.GameState)
-}
 
 func getInt(state *shared.GameState, key string) int {
 	if val, ok := state.Data[key].(int); ok {
@@ -198,7 +186,7 @@ func TimePasses(s *shared.GameState, minutes int) bool {
 	}
 
 	finalEnergySpent := int(math.Round(baseEnergySpent))
-	return AddEnergy(s, finalEnergySpent, "Player died of hunger.")
+	return AddEnergy(s, finalEnergySpent, "shared.Player died of hunger.")
 }
 
 func ClearEventLogs(s *shared.GameState) {
@@ -227,19 +215,19 @@ func InitState() *shared.GameState {
 	}
 }
 
-func InitRobots() map[string]*Player {
-	return map[string]*Player{
+func InitRobots() map[string]*shared.Player {
+	return map[string]*shared.Player{
 		"round": {
 			Name: "round",
 			Decide: func(s *shared.GameState) string {
-				return RobotInput("end_of_round")
+				return core.RobotInput("end_of_round")
 			},
 		},
 	}
 }
 
-func InitDeck(s *shared.GameState) map[string]*Card {
-	return map[string]*Card{
+func InitDeck(s *shared.GameState) map[string]*shared.Card {
+	return map[string]*shared.Card{
 		"skip": {
 			Name: "Skip",
 			Conditions: func(state *shared.GameState) bool { return true },
@@ -506,7 +494,7 @@ func InitDeck(s *shared.GameState) map[string]*Card {
 				if TimePasses(state, 60) {
 					return
 				}
-				LogEvent(state, "Player does nothing for 1 hour.")
+				LogEvent(state, "shared.Player does nothing for 1 hour.")
 			},
 		},
 		"end_of_round": {
