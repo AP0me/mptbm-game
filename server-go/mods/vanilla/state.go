@@ -1,47 +1,48 @@
 package vanilla
 
 import (
+	"game/server/mods/shared"
 	"math"
 	"math/rand"
+	"net"
 	"slices"
 	"time"
-	"net"
 )
 
 type Player struct {
 	Name   string
 	Conn   net.Conn
-	Decide func(state *GameState) string
+	Decide func(state *shared.GameState) string
 }
 
 type Card struct {
 	Name       string
-	Conditions func(state *GameState) bool
-	Action     func(state *GameState)
+	Conditions func(state *shared.GameState) bool
+	Action     func(state *shared.GameState)
 }
 
-func getInt(state *GameState, key string) int {
+func getInt(state *shared.GameState, key string) int {
 	if val, ok := state.Data[key].(int); ok {
 		return val
 	}
 	return 0
 }
 
-func getString(state *GameState, key string) string {
+func getString(state *shared.GameState, key string) string {
 	if val, ok := state.Data[key].(string); ok {
 		return val
 	}
 	return ""
 }
 
-func getStringList(state *GameState, key string) []string {
+func getStringList(state *shared.GameState, key string) []string {
 	if val, ok := state.Data[key].([]string); ok {
 		return val
 	}
 	return []string{}
 }
 
-func getBool(state *GameState, key string) bool {
+func getBool(state *shared.GameState, key string) bool {
 	if val, ok := state.Data[key].(bool); ok {
 		return val
 	}
@@ -64,35 +65,35 @@ func isHuman(p string) bool {
 	return slices.Contains(humanKeys(), p)
 }
 
-func (s *GameState) PropedSet(key string, val int) {
+func PropedSet(s *shared.GameState, key string, val int) {
 	if val < 0 {
 		val = 0
 	}
 	s.Data[key] = val
 }
 
-func (s *GameState) GetActingPlayer() string {
+func GetActingPlayer(s *shared.GameState) string {
 	return getString(s, "acting_player")
 }
 
-func (s *GameState) PlayerDotKey(key string) string {
-	p := s.GetActingPlayer()
+func PlayerDotKey(s *shared.GameState, key string) string {
+	p := GetActingPlayer(s)
 	return p + "." + key
 }
 
-func (s *GameState) LocalDotKey(key string) string {
-	loc := getString(s, s.PlayerDotKey("location"))
+func LocalDotKey(s *shared.GameState, key string) string {
+	loc := getString(s, PlayerDotKey(s, "location"))
 	return loc + "." + key
 }
 
-func (s *GameState) LogEvent(msg string) {
+func LogEvent(s *shared.GameState, msg string) {
 	logs := getStringList(s, "event_logs")
 	s.Data["event_logs"] = append(logs, msg)
 }
 
-func (s *GameState) EndTurn() {
+func EndTurn(s *shared.GameState) {
 	order := getStringList(s, "player_order")
-	current := s.GetActingPlayer()
+	current := GetActingPlayer(s)
 	nextIdx := 0
 	for i, name := range order {
 		if name == current {
@@ -103,7 +104,7 @@ func (s *GameState) EndTurn() {
 	s.Data["acting_player"] = order[nextIdx]
 }
 
-func (s *GameState) RemovePlayers(playerKeys []string) {
+func RemovePlayers(s *shared.GameState, playerKeys []string) {
 	order := getStringList(s, "player_order")
 
 	var newOrder []string
@@ -116,29 +117,29 @@ func (s *GameState) RemovePlayers(playerKeys []string) {
 	s.Data["player_order"] = newOrder
 }
 
-func (s *GameState) AddEnergy(amount int, deathMsg string) bool {
-	key := s.PlayerDotKey("energy")
+func AddEnergy(s *shared.GameState, amount int, deathMsg string) bool {
+	key := PlayerDotKey(s, "energy")
 	
 	current := getInt(s, key)
-	max := getInt(s, s.PlayerDotKey("max_energy"))
+	max := getInt(s, PlayerDotKey(s, "max_energy"))
 	
 	newVal := current + amount
 	if newVal <= 0 {
-		s.PropedSet(key, 0)
-		s.LogEvent(deathMsg)
-		s.RemovePlayers([]string{s.GetActingPlayer()})
-		s.EndTurn()
+		PropedSet(s, key, 0)
+		LogEvent(s, deathMsg)
+		RemovePlayers(s, []string{GetActingPlayer(s)})
+		EndTurn(s)
 		return true
 	}
 	
 	if newVal > max {
 		newVal = max
 	}
-	s.PropedSet(key, newVal)
+	PropedSet(s, key, newVal)
 	return false
 }
 
-func (s *GameState) SunLightLevel() int {
+func SunLightLevel(s *shared.GameState) int {
 	t, _ := time.Parse("2006-01-02 15:04:05", getString(s, "date_time"))
 	hour := t.Hour()
 	
@@ -151,18 +152,18 @@ func (s *GameState) SunLightLevel() int {
 	return 0
 }
 
-func (s *GameState) LightLevel() int {
-	sunLightLevel := s.SunLightLevel()
+func LightLevel(s *shared.GameState) int {
+	sunLightLevel := SunLightLevel(s)
 
 	fire_light_level := 0
-	if getInt(s, s.LocalDotKey("fire_minutes")) > 0 {
+	if getInt(s, LocalDotKey(s, "fire_minutes")) > 0 {
 		fire_light_level = 4
 	}
 
 	return sunLightLevel + fire_light_level
 }
 
-func (s *GameState) TimePasses(minutes int) bool {
+func TimePasses(s *shared.GameState, minutes int) bool {
 	t, _ := time.Parse("2006-01-02 15:04:05", getString(s, "date_time"))
 	newTime := t.Add(time.Duration(minutes) * time.Minute)
 	s.Data["date_time"] = newTime.Format("2006-01-02 15:04:05")
@@ -179,41 +180,41 @@ func (s *GameState) TimePasses(minutes int) bool {
 				if newFire < 0 {
 					newFire = 0
 				}
-				s.PropedSet(fireKey, newFire)
+				PropedSet(s, fireKey, newFire)
 			}
 		}
 	}
 	baseEnergySpent := -10.0 * (float64(minutes) / 60.0)
-	if getBool(s, s.PlayerDotKey("sleeping")) {
+	if getBool(s, PlayerDotKey(s, "sleeping")) {
 		baseEnergySpent /= 5.0
 	}
 
-	if getBool(s, s.LocalDotKey("shelter")) {
+	if getBool(s, LocalDotKey(s, "shelter")) {
 		baseEnergySpent /= 2.0
 	}
 
-	if getInt(s, s.LocalDotKey("fire_minutes")) > 0 {
+	if getInt(s, LocalDotKey(s, "fire_minutes")) > 0 {
 		baseEnergySpent /= 2.0
 	}
 
 	finalEnergySpent := int(math.Round(baseEnergySpent))
-	return s.AddEnergy(finalEnergySpent, "Player died of hunger.")
+	return AddEnergy(s, finalEnergySpent, "Player died of hunger.")
 }
 
-func (s *GameState) ClearEventLogs() {
+func ClearEventLogs(s *shared.GameState) {
 	s.Data["event_logs"] = []string{}
 }
 
-func InitState() *GameState {
-	return &GameState{
+func InitState() *shared.GameState {
+	return &shared.GameState{
 		Data: map[string]interface{}{
-			"status":        "RUNNING",
-			"event_logs":    []string{},
+			"status":		"RUNNING",
+			"event_logs":	[]string{},
 			"invisible_keys": []string{"invisible_keys", "event_logs"},
-			"round":         1,
+			"round":		 1,
 			"player_order":  slices.Concat(humanKeys(), robotKeys()),
 			"acting_player": "anar",
-			"date_time":     time.Now().Format("2006-01-02 00:00:00"),
+			"date_time":	 time.Now().Format("2006-01-02 00:00:00"),
 			"anar.location": "forest",
 			"anar.energy":   100,
 			"anar.max_energy": 100,
@@ -230,72 +231,72 @@ func InitRobots() map[string]*Player {
 	return map[string]*Player{
 		"round": {
 			Name: "round",
-			Decide: func(s *GameState) string {
+			Decide: func(s *shared.GameState) string {
 				return RobotInput("end_of_round")
 			},
 		},
 	}
 }
 
-func InitDeck(s *GameState) map[string]*Card {
+func InitDeck(s *shared.GameState) map[string]*Card {
 	return map[string]*Card{
 		"skip": {
 			Name: "Skip",
-			Conditions: func(state *GameState) bool { return true },
-			Action: func(state *GameState) {
-				state.ClearEventLogs()
-				state.EndTurn()
-				state.LogEvent("Let's see what else is happening.")
+			Conditions: func(state *shared.GameState) bool { return true },
+			Action: func(state *shared.GameState) {
+				ClearEventLogs(state)
+				EndTurn(state)
+				LogEvent(state, "Let's see what else is happening.")
 			},
 		},
 		"eat": {
 			Name: "Eat 10 food",
-			Conditions: func(state *GameState) bool {
-				return isHuman(state.GetActingPlayer()) && getInt(state, state.LocalDotKey("food")) > 0
+			Conditions: func(state *shared.GameState) bool {
+				return isHuman(GetActingPlayer(state)) && getInt(state, LocalDotKey(state, "food")) > 0
 			},
-			Action: func(state *GameState) {
-				state.ClearEventLogs()
+			Action: func(state *shared.GameState) {
+				ClearEventLogs(state)
 
-				if state.TimePasses(30) {
+				if TimePasses(state, 30) {
 					return
 				}
 
 				cooked := 20
-				if getInt(state, state.LocalDotKey("fire_minutes")) > 0 {
+				if getInt(state, LocalDotKey(state, "fire_minutes")) > 0 {
 					cooked = 50
 				}
 
-				if state.AddEnergy(cooked, "Died eating") {
+				if AddEnergy(state, cooked, "Died eating") {
 					return
 				}
 
-				state.PropedSet(state.LocalDotKey("food"), getInt(state, state.LocalDotKey("food")) - 15)
+				PropedSet(state, LocalDotKey(state, "food"), getInt(state, LocalDotKey(state, "food")) - 15)
 
 				message := "The player ate raw food."
 				if cooked > 20 {
 					message = "The player ate a cooked meal."
 				}
-				state.LogEvent(message)
+				LogEvent(state, message)
 			},
 		},
 		"hunt": {
 			Name: "Hunt game",
-			Conditions: func(state *GameState) bool {
-				return isHuman(state.GetActingPlayer())
+			Conditions: func(state *shared.GameState) bool {
+				return isHuman(GetActingPlayer(state))
 			},
-			Action: func(state *GameState) {
-				state.ClearEventLogs()
-				isDay := state.SunLightLevel() > 0
+			Action: func(state *shared.GameState) {
+				ClearEventLogs(state)
+				isDay := SunLightLevel(state) > 0
 				yield := 3
 				if isDay {
 					yield = 12
 				}
-				state.PropedSet(state.LocalDotKey("food"), getInt(state, state.LocalDotKey("food")) + yield)
+				PropedSet(state, LocalDotKey(state, "food"), getInt(state, LocalDotKey(state, "food")) + yield)
 
-				if state.AddEnergy(-10, "Died hunting") {
+				if AddEnergy(state, -10, "Died hunting") {
 					return
 				}
-				if state.TimePasses(60) {
+				if TimePasses(state, 60) {
 					return
 				}
 
@@ -303,29 +304,29 @@ func InitDeck(s *GameState) map[string]*Card {
 				if isDay {
 					message = "The daytime hunt was highly productive."
 				}
-				state.LogEvent(message)
+				LogEvent(state, message)
 			},
 		},
 		"wood": {
 			Name: "Collect wood",
-			Conditions: func(state *GameState) bool {
-				return isHuman(state.GetActingPlayer()) && getInt(state, state.PlayerDotKey("energy")) > 5
+			Conditions: func(state *shared.GameState) bool {
+				return isHuman(GetActingPlayer(state)) && getInt(state, PlayerDotKey(state, "energy")) > 5
 			},
-			Action: func(state *GameState) {
-				state.ClearEventLogs()
-				if state.AddEnergy(-5, "Died collecting wood") {
+			Action: func(state *shared.GameState) {
+				ClearEventLogs(state)
+				if AddEnergy(state, -5, "Died collecting wood") {
 					return
 				}
 
-				hasLight := state.LightLevel() > 3
+				hasLight := LightLevel(state) > 3
 				yield := 3
 				if hasLight {
 					yield = 5
 				}
 
-				state.PropedSet(state.LocalDotKey("wood"), getInt(state, state.LocalDotKey("wood")) + yield)
+				PropedSet(state, LocalDotKey(state, "wood"), getInt(state, LocalDotKey(state, "wood")) + yield)
 
-				if state.TimePasses(60) {
+				if TimePasses(state, 60) {
 					return
 				}
 
@@ -333,73 +334,73 @@ func InitDeck(s *GameState) map[string]*Card {
 				if hasLight {
 					message = "The player foraged for wood."
 				}
-				state.LogEvent(message)
+				LogEvent(state, message)
 			},
 		},
 		"shelter": {
 			Name: "Build a shelter (50 wood)",
-			Conditions: func(state *GameState) bool {
-				return isHuman(state.GetActingPlayer()) && getInt(state, state.LocalDotKey("wood")) >= 50
+			Conditions: func(state *shared.GameState) bool {
+				return isHuman(GetActingPlayer(state)) && getInt(state, LocalDotKey(state, "wood")) >= 50
 			},
-			Action: func(state *GameState) {
-				state.ClearEventLogs()
+			Action: func(state *shared.GameState) {
+				ClearEventLogs(state)
 
-				if state.AddEnergy(-45, "Died building shelter") {
+				if AddEnergy(state, -45, "Died building shelter") {
 					return
 				}
-				if state.TimePasses(60) {
+				if TimePasses(state, 60) {
 					return
 				}
 
-				state.Data[state.LocalDotKey("shelter")] = true
-				state.PropedSet(state.LocalDotKey("wood"), getInt(state, state.LocalDotKey("wood")) - 50)
+				state.Data[LocalDotKey(state, "shelter")] = true
+				PropedSet(state, LocalDotKey(state, "wood"), getInt(state, LocalDotKey(state, "wood")) - 50)
 
-				state.LogEvent("The player built a shelter.")
+				LogEvent(state, "The player built a shelter.")
 			},
 		},
 		"boat": {
 			Name: "Build a boat (250 wood)",
-			Conditions: func(state *GameState) bool {
-				return isHuman(state.GetActingPlayer()) && getInt(state, state.LocalDotKey("wood")) >= 250
+			Conditions: func(state *shared.GameState) bool {
+				return isHuman(GetActingPlayer(state)) && getInt(state, LocalDotKey(state, "wood")) >= 250
 			},
-			Action: func(state *GameState) {
-				state.ClearEventLogs()
+			Action: func(state *shared.GameState) {
+				ClearEventLogs(state)
 
-				if state.AddEnergy(-45, "Died building boat") {
+				if AddEnergy(state, -45, "Died building boat") {
 					return
 				}
-				if state.TimePasses(60) {
+				if TimePasses(state, 60) {
 					return
 				}
 
-				state.Data[state.LocalDotKey("boat")] = true
-				state.PropedSet(state.LocalDotKey("wood"), getInt(state, state.LocalDotKey("wood")) - 250)
+				state.Data[LocalDotKey(state, "boat")] = true
+				PropedSet(state, LocalDotKey(state, "wood"), getInt(state, LocalDotKey(state, "wood")) - 250)
 
-				state.LogEvent("The player built a boat.")
+				LogEvent(state, "The player built a boat.")
 			},
 		},
 		"fish": {
 			Name: "Go fishing",
-			Conditions: func(state *GameState) bool {
-				return isHuman(state.GetActingPlayer()) && getBool(state, state.LocalDotKey("boat"))
+			Conditions: func(state *shared.GameState) bool {
+				return isHuman(GetActingPlayer(state)) && getBool(state, LocalDotKey(state, "boat"))
 			},
-			Action: func(state *GameState) {
-				state.ClearEventLogs()
+			Action: func(state *shared.GameState) {
+				ClearEventLogs(state)
 				lucky := rand.Intn(2) == 1
 				yield := 3
 				if lucky {
 					yield = 12
 				}
 
-				state.PropedSet(state.LocalDotKey("food"), getInt(state, state.LocalDotKey("food")) + yield)
+				PropedSet(state, LocalDotKey(state, "food"), getInt(state, LocalDotKey(state, "food")) + yield)
 
-				if state.TimePasses(60) {
+				if TimePasses(state, 60) {
 					return
 				}
 
-				if state.SunLightLevel() > 6 && !getBool(state, "bottle_map") {
+				if SunLightLevel(state) > 6 && !getBool(state, "bottle_map") {
 					state.Data["bottle_map"] = true
-					state.LogEvent("The player fishes out a map in a bottle!")
+					LogEvent(state, "The player fishes out a map in a bottle!")
 					return
 				}
 
@@ -407,117 +408,117 @@ func InitDeck(s *GameState) map[string]*Card {
 				if lucky {
 					message = "The player caught a big fish."
 				}
-				state.LogEvent(message)
+				LogEvent(state, message)
 			},
 		},
 		"fire": {
 			Name: "Make fire (up to 10 wood)",
-			Conditions: func(state *GameState) bool {
-				return isHuman(state.GetActingPlayer()) && getInt(state, state.LocalDotKey("wood")) > 0
+			Conditions: func(state *shared.GameState) bool {
+				return isHuman(GetActingPlayer(state)) && getInt(state, LocalDotKey(state, "wood")) > 0
 			},
-			Action: func(state *GameState) {
-				state.ClearEventLogs()
+			Action: func(state *shared.GameState) {
+				ClearEventLogs(state)
 				fromScratch := false
 
-				if getInt(state, state.LocalDotKey("fire_minutes")) <= 0 {
+				if getInt(state, LocalDotKey(state, "fire_minutes")) <= 0 {
 					fromScratch = true
-					if state.AddEnergy(-45, "Died making fire from scratch") {
+					if AddEnergy(state, -45, "Died making fire from scratch") {
 						return
 					}
-					if state.TimePasses(60) {
+					if TimePasses(state, 60) {
 						return
 					}
 				}
 
-				currentWood := getInt(state, state.LocalDotKey("wood"))
+				currentWood := getInt(state, LocalDotKey(state, "wood"))
 				woodToBurn := currentWood
 				if woodToBurn > 10 {
 					woodToBurn = 10
 				}
 
 				burnMinutes := woodToBurn * 90
-				state.PropedSet(state.LocalDotKey("fire_minutes"), getInt(state, state.LocalDotKey("fire_minutes")) + burnMinutes)
-				state.PropedSet(state.LocalDotKey("wood"), currentWood - woodToBurn)
+				PropedSet(state, LocalDotKey(state, "fire_minutes"), getInt(state, LocalDotKey(state, "fire_minutes")) + burnMinutes)
+				PropedSet(state, LocalDotKey(state, "wood"), currentWood - woodToBurn)
 
 				message := "The player stokes the fire with more wood."
 				if fromScratch {
 					message = "The player rubs sticks together to make fire. It was exhausting and time consuming."
 				}
-				state.LogEvent(message)
+				LogEvent(state, message)
 			},
 		},
 		"follow_the_map": {
 			Name: "Follow the map the player fished out.",
-			Conditions: func(state *GameState) bool {
-				return isHuman(state.GetActingPlayer()) && getBool(state, "bottle_map")
+			Conditions: func(state *shared.GameState) bool {
+				return isHuman(GetActingPlayer(state)) && getBool(state, "bottle_map")
 			},
-			Action: func(state *GameState) {
+			Action: func(state *shared.GameState) {
 
-				food := getInt(state, state.LocalDotKey("food"))
-				wood := getInt(state, state.LocalDotKey("wood"))
-				fire := getInt(state, state.LocalDotKey("fire_minutes"))
+				food := getInt(state, LocalDotKey(state, "food"))
+				wood := getInt(state, LocalDotKey(state, "wood"))
+				fire := getInt(state, LocalDotKey(state, "fire_minutes"))
 
-				state.PropedSet(state.LocalDotKey("food"), food - 10)
-				state.PropedSet(state.LocalDotKey("wood"), wood - 10)
-				state.PropedSet(state.LocalDotKey("fire_minutes"), fire - 60)
+				PropedSet(state, LocalDotKey(state, "food"), food - 10)
+				PropedSet(state, LocalDotKey(state, "wood"), wood - 10)
+				PropedSet(state, LocalDotKey(state, "fire_minutes"), fire - 60)
 
 				newLoc := "caves"
-				state.Data[state.PlayerDotKey("location")] = newLoc
+				state.Data[PlayerDotKey(state, "location")] = newLoc
 
-				state.PropedSet(newLoc+".food", getInt(state, newLoc+".food") + food)
-				state.PropedSet(newLoc+".wood", getInt(state, newLoc+".wood") + wood)
-				state.PropedSet(newLoc+".fire_minutes", getInt(state, newLoc+".fire_minutes") + fire)
+				PropedSet(state, newLoc+".food", getInt(state, newLoc+".food") + food)
+				PropedSet(state, newLoc+".wood", getInt(state, newLoc+".wood") + wood)
+				PropedSet(state, newLoc+".fire_minutes", getInt(state, newLoc+".fire_minutes") + fire)
 
-				state.LogEvent("The player enters the caves with all the supplies they could carry.")
+				LogEvent(state, "The player enters the caves with all the supplies they could carry.")
 			},
 		},
 		"sleep": {
 			Name: "Sleep 8 hours",
-			Conditions: func(state *GameState) bool {
-				return isHuman(state.GetActingPlayer()) && state.SunLightLevel() <= 0
+			Conditions: func(state *shared.GameState) bool {
+				return isHuman(GetActingPlayer(state)) && SunLightLevel(state) <= 0
 			},
-			Action: func(state *GameState) {
-				state.ClearEventLogs()
+			Action: func(state *shared.GameState) {
+				ClearEventLogs(state)
 
-				state.Data[state.PlayerDotKey("sleeping")] = true
-				hasFire := getInt(state, state.LocalDotKey("fire_minutes")) > 0
+				state.Data[PlayerDotKey(state, "sleeping")] = true
+				hasFire := getInt(state, LocalDotKey(state, "fire_minutes")) > 0
 
-				if state.TimePasses(8 * 60) {
+				if TimePasses(state, 8 * 60) {
 					return
 				}
 
-				delete(state.Data, state.PlayerDotKey("sleeping"))
+				delete(state.Data, PlayerDotKey(state, "sleeping"))
 
 				message := "The player slept in the cold."
 				if hasFire {
 					message = "The player slept in warmth."
 				}
-				state.LogEvent(message)
+				LogEvent(state, message)
 			},
 		},
 		"wait": {
 			Name: "Wait 1 hour",
-			Conditions: func(state *GameState) bool {
-				return isHuman(state.GetActingPlayer())
+			Conditions: func(state *shared.GameState) bool {
+				return isHuman(GetActingPlayer(state))
 			},
-			Action: func(state *GameState) {
-				state.ClearEventLogs()
-				if state.TimePasses(60) {
+			Action: func(state *shared.GameState) {
+				ClearEventLogs(state)
+				if TimePasses(state, 60) {
 					return
 				}
-				state.LogEvent("Player does nothing for 1 hour.")
+				LogEvent(state, "Player does nothing for 1 hour.")
 			},
 		},
 		"end_of_round": {
 			Name: "End of the round",
-			Conditions: func(state *GameState) bool {
-				return state.GetActingPlayer() == "round"
+			Conditions: func(state *shared.GameState) bool {
+				return GetActingPlayer(state) == "round"
 			},
-			Action: func(state *GameState) {
-				state.ClearEventLogs()
-				state.PropedSet("round", getInt(state, "round") + 1)
-				state.EndTurn()
-				state.LogEvent("End of the round.")
+			Action: func(state *shared.GameState) {
+				ClearEventLogs(state)
+				PropedSet(state, "round", getInt(state, "round") + 1)
+				EndTurn(state)
+				LogEvent(state, "End of the round.")
 			},
 		},
 	}
