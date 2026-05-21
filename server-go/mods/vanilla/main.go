@@ -511,3 +511,21 @@ func InitDeck(s *shared.GameState) map[string]*shared.Card {
 		},
 	}
 }
+
+type VanillaMod struct{}
+
+func (m VanillaMod) InitState() *shared.GameState {
+    return InitState()
+}
+
+func (m VanillaMod) InitDeck(state *shared.GameState) map[string]*shared.Card {
+    return InitDeck(state)
+}
+
+func (m VanillaMod) InitRobots() map[string]*shared.Player {
+    return InitRobots()
+}
+
+func (m VanillaMod) GetActingPlayer(s *shared.GameState) string {
+    return GetActingPlayer(s)
+}

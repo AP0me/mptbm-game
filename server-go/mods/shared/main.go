@@ -18,3 +18,9 @@ type Card struct {
 	Action     func(state *GameState)
 }
 
+type Mod interface {
+    InitState() *GameState
+    InitDeck(state *GameState) map[string]*Card
+    InitRobots() map[string]*Player
+	GetActingPlayer(s *GameState) string
+}
