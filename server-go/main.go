@@ -9,28 +9,27 @@ import (
 	"plugin"
 )
 
+func pluginFunctionLookup(p *plugin.Plugin, functionName string) plugin.Symbol {
+	symInitDeck, err := p.Lookup(functionName)
+	if err != nil {
+		log.Fatalf("Lookup InitDeck failed: %v", err)
+	}
+
+	return symInitDeck;
+}
+
 func main() {
 	p, err := plugin.Open("mods/vanilla/vanilla.so")
 	if err != nil {
 		log.Fatalf("Error opening plugin: %v", err)
 	}
+
+	symInitDeck := pluginFunctionLookup(p, "InitDeck")
+	symInitState := pluginFunctionLookup(p, "InitState")
+	symInitRobots := pluginFunctionLookup(p, "InitRobots")
 	
-	symInitState, err := p.Lookup("InitState")
-	if err != nil {
-		log.Fatalf("Lookup InitState failed: %v", err)
-	}
 	initStateDLL := symInitState.(func() *shared.GameState)
-
-	symInitDeck, err := p.Lookup("InitDeck")
-	if err != nil {
-		log.Fatalf("Lookup InitDeck failed: %v", err)
-	}
 	initDeckDLL := symInitDeck.(func(*shared.GameState) map[string]*shared.Card)
-
-	symInitRobots, err := p.Lookup("InitRobots")
-	if err != nil {
-		log.Fatalf("Lookup InitRobots failed: %v", err)
-	}
 	initRobotsDLL := symInitRobots.(func() map[string]*shared.Player)
 
 	ln, _ := net.Listen("tcp", ":8080")
