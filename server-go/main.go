@@ -5,14 +5,11 @@ import (
 	"game/server/core"
 	"game/server/mods/shared"
 	"net"
-	"syscall"
 )
 
 func main() {
 	ln, _ := net.Listen("tcp", ":8080")
 	fmt.Println("Server started on :8080")
-
-	dll := syscall.("user32.dll")
 	
 	state := InitState()
     deck := InitDeck(state)

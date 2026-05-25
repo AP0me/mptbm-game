@@ -1,4 +1,4 @@
-package vanilla
+package main
 
 import (
 	"game/server/mods/shared"
@@ -482,4 +482,7 @@ func InitDeck(s *shared.GameState) map[string]*shared.Card {
 			},
 		},
 	}
+}
+
+func main() {
 }
