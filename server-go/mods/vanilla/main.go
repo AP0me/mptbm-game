@@ -1,7 +1,6 @@
 package vanilla
 
 import (
-	"game/server/core"
 	"game/server/mods/shared"
 	"math"
 	"math/rand"
@@ -19,6 +18,11 @@ func robotKeys() []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+func RobotInput(val string) string {
+	time.Sleep(1 * time.Second)
+	return val
 }
 
 func isHuman(p string) bool {
@@ -188,7 +192,7 @@ func InitRobots() map[string]*shared.Player {
 		"round": {
 			Name: "round",
 			Decide: func(s *shared.GameState) string {
-				return core.RobotInput("end_of_round")
+				return RobotInput("end_of_round")
 			},
 		},
 	}

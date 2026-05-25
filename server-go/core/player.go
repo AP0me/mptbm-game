@@ -6,7 +6,6 @@ import (
 	"game/server/mods/shared"
 	"net"
 	"strings"
-	"time"
 )
 
 func HumanInput(conn net.Conn) string {
@@ -14,11 +13,6 @@ func HumanInput(conn net.Conn) string {
 	reader := bufio.NewReader(conn)
 	input, _ := reader.ReadString('\n')
 	return strings.TrimSpace(input)
-}
-
-func RobotInput(val string) string {
-	time.Sleep(1 * time.Second)
-	return val
 }
 
 func WelcomeHumansToPlayerList(playerOrder []string, ln net.Listener, players map[string]*shared.Player) {
