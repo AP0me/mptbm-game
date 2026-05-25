@@ -19,25 +19,25 @@ func pluginFunctionLookup(p *plugin.Plugin, functionName string) plugin.Symbol {
 }
 
 func main() {
-	p, err := plugin.Open("mods/vanilla/vanilla.so")
-	if err != nil {
-		log.Fatalf("Error opening plugin: %v", err)
-	}
+	// p, err := plugin.Open("mods/vanilla/vanilla.so")
+	// if err != nil {
+	// 	log.Fatalf("Error opening plugin: %v", err)
+	// }
 
-	symInitDeck := pluginFunctionLookup(p, "InitDeck")
-	symInitState := pluginFunctionLookup(p, "InitState")
-	symInitRobots := pluginFunctionLookup(p, "InitRobots")
+	// symInitDeck := pluginFunctionLookup(p, "InitDeck")
+	// symInitState := pluginFunctionLookup(p, "InitState")
+	// symInitRobots := pluginFunctionLookup(p, "InitRobots")
 	
-	initStateDLL := symInitState.(func() *shared.GameState)
-	initDeckDLL := symInitDeck.(func(*shared.GameState) map[string]*shared.Card)
-	initRobotsDLL := symInitRobots.(func() map[string]*shared.Player)
+	// initStateDLL := symInitState.(func() *shared.GameState)
+	// initDeckDLL := symInitDeck.(func(*shared.GameState) map[string]*shared.Card)
+	// initRobotsDLL := symInitRobots.(func() map[string]*shared.Player)
 
 	ln, _ := net.Listen("tcp", ":8080")
 	fmt.Println("Server started on :8080")
 
-	state := initStateDLL()
-	deck := initDeckDLL(state)
-	players := initRobotsDLL()
+	state := initState() // DLL()
+	deck := initDeck() // DLL(state)
+	players := initRobots() // DLL()
 
 	core.WelcomeHumansToPlayerList(state.Data["player_order"].([]string), ln, players)
 	conns := core.PlayerConnections(players)

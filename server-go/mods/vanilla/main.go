@@ -483,3 +483,5 @@ func InitDeck(s *shared.GameState) map[string]*shared.Card {
 		},
 	}
 }
+
+func main() {}
