@@ -178,12 +178,15 @@ func InitState() uint64 {
 			"player_order":    slices.Concat(humanKeys(), robotKeys()),
 			"acting_player":   "anar",
 			"date_time":       time.Now().Format("2006-01-02 00:00:00"),
-			"anar.location":   "forest",
-			"anar.energy":     100,
-			"anar.max_energy": 100,
 			"forest.wood":     0,
 			"forest.food":     0,
 		},
+	}
+	for _, human_key := range humanKeys() {
+		state.Data[human_key+".location"] = "forest"
+		state.Data[human_key+".max_energy"] = 100
+		state.Data[human_key+".energy"] = 100
+        state.Data["invisible_keys"] = append(shared.GetStringList(state, "invisible_keys"), human_key+".sleeping");
 	}
 	
 	buf, err := json.Marshal(state)
