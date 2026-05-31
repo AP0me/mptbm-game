@@ -72,6 +72,22 @@ func GetActingPlayer(s *GameState) string {
 	return GetString(s, "acting_player")
 }
 
+func InitRobotsNames(robots map[string]*Player) uint64 {
+    names := map[string]HostPlayer{};
+    for name, player := range robots {
+        names[name] = HostPlayer{Name: player.Name}
+    }
+
+    buf, err := json.Marshal(names)
+    if err != nil {
+        return 0
+    }
+
+    ptr := uint32(uintptr(unsafe.Pointer(&buf[0])))
+    size := uint32(len(buf))
+    return (uint64(ptr) << 32) | uint64(size)
+}
+
 var (
     lastPlayableCardsOutput []byte
     lastChooseCardOutput    []byte

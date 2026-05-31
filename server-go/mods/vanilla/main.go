@@ -214,24 +214,6 @@ func InitRobots() map[string]*shared.Player {
 	}
 }
 
-//go:wasmexport InitRobotsNames
-func InitRobotsNames() uint64 {
-    robots := InitRobots()
-    names := map[string]shared.HostPlayer{};
-    for name, player := range robots {
-        names[name] = shared.HostPlayer{Name: player.Name}
-    }
-
-    buf, err := json.Marshal(names)
-    if err != nil {
-        return 0
-    }
-
-    ptr := uint32(uintptr(unsafe.Pointer(&buf[0])))
-    size := uint32(len(buf))
-    return (uint64(ptr) << 32) | uint64(size)
-}
-
 func InitDeck() map[string]*shared.Card {
 	return map[string]*shared.Card{
 		"skip": {
@@ -516,6 +498,11 @@ func InitDeck() map[string]*shared.Card {
 			},
 		},
 	}
+}
+
+//go:wasmexport InitRobotsNames
+func InitRobotsNames() uint64 {
+	return shared.InitRobotsNames(InitRobots())
 }
 
 //go:wasmexport PlayableCards
