@@ -588,13 +588,13 @@ func ChooseCard(namePtr uint32, nameSize uint32, statePtr uint32, stateSize uint
     nameBytes := unsafe.Slice((*byte)(unsafe.Pointer(uintptr(namePtr))), nameSize)
     var playerName string
     if err := json.Unmarshal(nameBytes, &playerName); err != nil {
-        return 0
+        return returnRawString("skip")
     }
 
     stateBytes := unsafe.Slice((*byte)(unsafe.Pointer(uintptr(statePtr))), stateSize)
     var state shared.GameState
     if err := json.Unmarshal(stateBytes, &state); err != nil {
-        return 0
+        return returnRawString("skip")
     }
 
     // CLEANUP: Free host input structures
@@ -609,8 +609,7 @@ func ChooseCard(namePtr uint32, nameSize uint32, statePtr uint32, stateSize uint
     // 3. Find the local robot execution logic
     robot, exists := localRobots[playerName]
     if !exists || robot.Decide == nil {
-        // If it's a human player or unknown robot, default to a Skip payload
-        return returnDefaultSkip()
+        return returnRawString("skip")
     }
 
     // 4. Execute decision logic safely INSIDE the WASM context
@@ -625,27 +624,17 @@ func ChooseCard(namePtr uint32, nameSize uint32, statePtr uint32, stateSize uint
         }
     }
 
-    // 5. Determine the choice and return the profile target
-    chosenCard, ok := playable[key]
-    if !ok {
-        chosenCard = shared.CardProfile{Name: "Skip"}
+    // Validation: If the robot decided on an unplayable card, force a "skip"
+    if _, ok := playable[key]; !ok {
+        key = "skip"
     }
 
-    buf, err := json.Marshal(chosenCard)
-    if err != nil {
-        return 0
-    }
-
-    lastChooseCardOutput = buf
-    ptr := uint32(uintptr(unsafe.Pointer(unsafe.SliceData(lastChooseCardOutput))))
-    size := uint32(len(lastChooseCardOutput))
-    return (uint64(ptr) << 32) | uint64(size)
+    return returnRawString(key)
 }
 
-// Helper to handle safe failures
-func returnDefaultSkip() uint64 {
-    buf, _ := json.Marshal(shared.CardProfile{Name: "Skip"})
-    lastChooseCardOutput = buf
+// Helper to wrap a raw string into a packed uint64 safely without JSON overhead
+func returnRawString(val string) uint64 {
+    lastChooseCardOutput = []byte(val)
     ptr := uint32(uintptr(unsafe.Pointer(unsafe.SliceData(lastChooseCardOutput))))
     size := uint32(len(lastChooseCardOutput))
     return (uint64(ptr) << 32) | uint64(size)

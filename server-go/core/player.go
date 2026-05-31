@@ -39,9 +39,7 @@ func WelcomeHumansToPlayerList(playerOrder []string, ln net.Listener, players ma
 		players[name] = &shared.Player{
 			Name: name,
 			Conn: conn,
-			Decide: func(s *shared.GameState) string {
-				return HumanInput(conn)
-			},
+			Decide: nil,
 		}
 		fmt.Printf("[Server] Player %s connected.\n", name)
 	}

@@ -126,55 +126,53 @@ func writeToWasm(ctx context.Context, instance api.Module, allocator api.Functio
 }
 
 func CallPlayableCards(ctx context.Context, instance api.Module, hostState any) (map[string]shared.CardProfile, error) {
-    allocator := instance.ExportedFunction("Allocate")
-    playableCardsFn := instance.ExportedFunction("PlayableCards")
+	allocator := instance.ExportedFunction("Allocate")
+	playableCardsFn := instance.ExportedFunction("PlayableCards")
 
-    ptr, size, err := writeToWasm(ctx, instance, allocator, hostState)
-    if err != nil {
-        return nil, err
-    }
+	ptr, size, err := writeToWasm(ctx, instance, allocator, hostState)
+	if err != nil {
+		return nil, err
+	}
 
-    res, err := playableCardsFn.Call(ctx, uint64(ptr), uint64(size))
-    if err != nil {
-        return nil, err
-    }
+	res, err := playableCardsFn.Call(ctx, uint64(ptr), uint64(size))
+	if err != nil {
+		return nil, err
+	}
 
-    outPtr := uint32(res[0] >> 32)
-    outSize := uint32(res[0])
-    outBytes, _ := instance.Memory().Read(outPtr, outSize)
+	outPtr := uint32(res[0] >> 32)
+	outSize := uint32(res[0])
+	outBytes, _ := instance.Memory().Read(outPtr, outSize)
 
-    // Unmarshal directly into the correct type
-    var playable map[string]shared.CardProfile
-    if err := json.Unmarshal(outBytes, &playable); err != nil {
-        return nil, err
-    }
-    
-    return playable, nil
+	// Unmarshal directly into the correct type
+	var playable map[string]shared.CardProfile
+	if err := json.Unmarshal(outBytes, &playable); err != nil {
+		return nil, err
+	}
+
+	return playable, nil
 }
 
-func CallChooseCard(ctx context.Context, instance api.Module, playerName string, hostState any) (map[string]any, error) {
+func CallChooseCard(ctx context.Context, instance api.Module, playerName string, hostState any) (string, error) {
     allocator := instance.ExportedFunction("Allocate")
     chooseCardFn := instance.ExportedFunction("ChooseCard")
 
     // 1. Write the player NAME string and state into the memory heap
-    // (writeToWasm will turn the string into a JSON string like "round")
     pPtr, pSize, _ := writeToWasm(ctx, instance, allocator, playerName)
     sPtr, sSize, _ := writeToWasm(ctx, instance, allocator, hostState)
 
     // 2. Invoke the choice calculation function
     res, err := chooseCardFn.Call(ctx, uint64(pPtr), uint64(pSize), uint64(sPtr), uint64(sSize))
     if err != nil {
-        return nil, err
+        return "", err
     }
 
-    // 3. Read back the single chosen card profile
+    // 3. Read back the single chosen card key
     outPtr := uint32(res[0] >> 32)
     outSize := uint32(res[0])
     outBytes, _ := instance.Memory().Read(outPtr, outSize)
 
-    var chosenCard map[string]any
-    _ = json.Unmarshal(outBytes, &chosenCard)
-    return chosenCard, nil
+    // Convert raw bytes directly to string—no JSON parsing required!
+    return string(outBytes), nil
 }
 
 func main() {
@@ -203,13 +201,17 @@ func main() {
 
 		playable_cards, _ := CallPlayableCards(ctx, instance, state)
 
-        if player.Conn != nil {
-            core.SendCards(playable_cards, player.Conn)
-        }
+		if player.Conn != nil {
+			core.SendCards(playable_cards, player.Conn)
+		}
 
-		card_key, _ := CallChooseCard(ctx, instance, acting_name, state)
+		card_key := "skip"
+		if player.Decide == nil {
+			card_key = core.HumanInput(player.Conn)
+		} else {
+			card_key, _ = CallChooseCard(ctx, instance, acting_name, state)
+		}
 		fmt.Println(acting_name, card_key)
-		time.Sleep(1000 * time.Millisecond)
 		// card.Action(&state) // TODO
 
 		core.SendMessages(shared.GetStringList(&state, "event_logs"), conns)
