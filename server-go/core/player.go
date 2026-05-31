@@ -41,6 +41,11 @@ func WelcomeHumansToPlayerList(playerOrder []string, ln net.Listener, players ma
 			Conn: conn,
 			Decide: nil,
 		}
+
+		for robot_key, robot := range robots {
+			players[robot_key] = &shared.Player{Name: robot.Name, Conn: nil, Decide: nil}
+		}
+
 		fmt.Printf("[Server] Player %s connected.\n", name)
 	}
 }
