@@ -81,10 +81,10 @@ func RemovePlayers(s *shared.GameState, playerKeys []string) {
 
 func AddEnergy(s *shared.GameState, amount int, deathMsg string) bool {
 	key := PlayerDotKey(s, "energy")
-	
+
 	current := shared.GetInt(s, key)
 	max := shared.GetInt(s, PlayerDotKey(s, "max_energy"))
-	
+
 	newVal := current + amount
 	if newVal <= 0 {
 		PropedSet(s, key, 0)
@@ -93,7 +93,7 @@ func AddEnergy(s *shared.GameState, amount int, deathMsg string) bool {
 		EndTurn(s)
 		return true
 	}
-	
+
 	if newVal > max {
 		newVal = max
 	}
@@ -104,7 +104,7 @@ func AddEnergy(s *shared.GameState, amount int, deathMsg string) bool {
 func SunLightLevel(s *shared.GameState) int {
 	t, _ := time.Parse("2006-01-02 15:04:05", shared.GetString(s, "date_time"))
 	hour := t.Hour()
-	
+
 	// Simplified sun logic: Peak at 12:00, 0 at night
 	if hour >= 6 && hour <= 18 {
 		progress := float64(hour-6) / 12.0
@@ -171,29 +171,29 @@ func ClearEventLogs(s *shared.GameState) {
 func InitState() uint64 {
 	state := &shared.GameState{
 		Data: map[string]interface{}{
-			"status":          "RUNNING",
-			"event_logs":      []string{},
-			"invisible_keys":  []string{"invisible_keys", "event_logs"},
-			"round":           1,
-			"player_order":    slices.Concat(humanKeys(), robotKeys()),
-			"acting_player":   "anar",
-			"date_time":       time.Now().Format("2006-01-02 00:00:00"),
-			"forest.wood":     0,
-			"forest.food":     0,
+			"status":         "RUNNING",
+			"event_logs":     []string{},
+			"invisible_keys": []string{"invisible_keys", "event_logs"},
+			"round":          1,
+			"player_order":   slices.Concat(humanKeys(), robotKeys()),
+			"acting_player":  "anar",
+			"date_time":      time.Now().Format("2006-01-02 00:00:00"),
+			"forest.wood":    0,
+			"forest.food":    0,
 		},
 	}
 	for _, human_key := range humanKeys() {
 		state.Data[human_key+".location"] = "forest"
 		state.Data[human_key+".max_energy"] = 100
 		state.Data[human_key+".energy"] = 100
-        state.Data["invisible_keys"] = append(shared.GetStringList(state, "invisible_keys"), human_key+".sleeping");
+		state.Data["invisible_keys"] = append(shared.GetStringList(state, "invisible_keys"), human_key+".sleeping")
 	}
-	
+
 	buf, err := json.Marshal(state)
 	if err != nil {
 		return 0
 	}
-	
+
 	ptr := uint32(uintptr(slicePtr(buf)))
 	size := uint32(len(buf))
 	return (uint64(ptr) << 32) | uint64(size)
@@ -220,7 +220,7 @@ func InitRobots() map[string]*shared.Player {
 func InitDeck() map[string]*shared.Card {
 	return map[string]*shared.Card{
 		"skip": {
-			Name: "Skip",
+			Name:       "Skip",
 			Conditions: func(state *shared.GameState) bool { return true },
 			Action: func(state *shared.GameState) {
 				ClearEventLogs(state)
@@ -249,7 +249,7 @@ func InitDeck() map[string]*shared.Card {
 					return
 				}
 
-				PropedSet(state, LocalDotKey(state, "food"), shared.GetInt(state, LocalDotKey(state, "food")) - 15)
+				PropedSet(state, LocalDotKey(state, "food"), shared.GetInt(state, LocalDotKey(state, "food"))-15)
 
 				message := "The player ate raw food."
 				if cooked > 20 {
@@ -270,7 +270,7 @@ func InitDeck() map[string]*shared.Card {
 				if isDay {
 					yield = 12
 				}
-				PropedSet(state, LocalDotKey(state, "food"), shared.GetInt(state, LocalDotKey(state, "food")) + yield)
+				PropedSet(state, LocalDotKey(state, "food"), shared.GetInt(state, LocalDotKey(state, "food"))+yield)
 
 				if AddEnergy(state, -10, "Died hunting") {
 					return
@@ -303,7 +303,7 @@ func InitDeck() map[string]*shared.Card {
 					yield = 5
 				}
 
-				PropedSet(state, LocalDotKey(state, "wood"), shared.GetInt(state, LocalDotKey(state, "wood")) + yield)
+				PropedSet(state, LocalDotKey(state, "wood"), shared.GetInt(state, LocalDotKey(state, "wood"))+yield)
 
 				if TimePasses(state, 60) {
 					return
@@ -332,7 +332,7 @@ func InitDeck() map[string]*shared.Card {
 				}
 
 				state.Data[LocalDotKey(state, "shelter")] = true
-				PropedSet(state, LocalDotKey(state, "wood"), shared.GetInt(state, LocalDotKey(state, "wood")) - 50)
+				PropedSet(state, LocalDotKey(state, "wood"), shared.GetInt(state, LocalDotKey(state, "wood"))-50)
 
 				LogEvent(state, "The player built a shelter.")
 			},
@@ -353,7 +353,7 @@ func InitDeck() map[string]*shared.Card {
 				}
 
 				state.Data[LocalDotKey(state, "boat")] = true
-				PropedSet(state, LocalDotKey(state, "wood"), shared.GetInt(state, LocalDotKey(state, "wood")) - 250)
+				PropedSet(state, LocalDotKey(state, "wood"), shared.GetInt(state, LocalDotKey(state, "wood"))-250)
 
 				LogEvent(state, "The player built a boat.")
 			},
@@ -371,7 +371,7 @@ func InitDeck() map[string]*shared.Card {
 					yield = 12
 				}
 
-				PropedSet(state, LocalDotKey(state, "food"), shared.GetInt(state, LocalDotKey(state, "food")) + yield)
+				PropedSet(state, LocalDotKey(state, "food"), shared.GetInt(state, LocalDotKey(state, "food"))+yield)
 
 				if TimePasses(state, 60) {
 					return
@@ -416,8 +416,8 @@ func InitDeck() map[string]*shared.Card {
 				}
 
 				burnMinutes := woodToBurn * 90
-				PropedSet(state, LocalDotKey(state, "fire_minutes"), shared.GetInt(state, LocalDotKey(state, "fire_minutes")) + burnMinutes)
-				PropedSet(state, LocalDotKey(state, "wood"), currentWood - woodToBurn)
+				PropedSet(state, LocalDotKey(state, "fire_minutes"), shared.GetInt(state, LocalDotKey(state, "fire_minutes"))+burnMinutes)
+				PropedSet(state, LocalDotKey(state, "wood"), currentWood-woodToBurn)
 
 				message := "The player stokes the fire with more wood."
 				if fromScratch {
@@ -437,16 +437,16 @@ func InitDeck() map[string]*shared.Card {
 				wood := shared.GetInt(state, LocalDotKey(state, "wood"))
 				fire := shared.GetInt(state, LocalDotKey(state, "fire_minutes"))
 
-				PropedSet(state, LocalDotKey(state, "food"), food - 10)
-				PropedSet(state, LocalDotKey(state, "wood"), wood - 10)
-				PropedSet(state, LocalDotKey(state, "fire_minutes"), fire - 60)
+				PropedSet(state, LocalDotKey(state, "food"), food-10)
+				PropedSet(state, LocalDotKey(state, "wood"), wood-10)
+				PropedSet(state, LocalDotKey(state, "fire_minutes"), fire-60)
 
 				newLoc := "caves"
 				state.Data[PlayerDotKey(state, "location")] = newLoc
 
-				PropedSet(state, newLoc+".food", shared.GetInt(state, newLoc+".food") + food)
-				PropedSet(state, newLoc+".wood", shared.GetInt(state, newLoc+".wood") + wood)
-				PropedSet(state, newLoc+".fire_minutes", shared.GetInt(state, newLoc+".fire_minutes") + fire)
+				PropedSet(state, newLoc+".food", shared.GetInt(state, newLoc+".food")+food)
+				PropedSet(state, newLoc+".wood", shared.GetInt(state, newLoc+".wood")+wood)
+				PropedSet(state, newLoc+".fire_minutes", shared.GetInt(state, newLoc+".fire_minutes")+fire)
 
 				LogEvent(state, "The player enters the caves with all the supplies they could carry.")
 			},
@@ -462,7 +462,7 @@ func InitDeck() map[string]*shared.Card {
 				state.Data[PlayerDotKey(state, "sleeping")] = true
 				hasFire := shared.GetInt(state, LocalDotKey(state, "fire_minutes")) > 0
 
-				if TimePasses(state, 8 * 60) {
+				if TimePasses(state, 8*60) {
 					return
 				}
 
@@ -495,7 +495,7 @@ func InitDeck() map[string]*shared.Card {
 			},
 			Action: func(state *shared.GameState) {
 				ClearEventLogs(state)
-				PropedSet(state, "round", shared.GetInt(state, "round") + 1)
+				PropedSet(state, "round", shared.GetInt(state, "round")+1)
 				EndTurn(state)
 				LogEvent(state, "End of the round.")
 			},
@@ -525,7 +525,7 @@ func PlayCardAction(keyPtr uint32, keySize uint32, statePtr uint32, stateSize ui
 
 //go:wasmexport Return2
 func Return2() int32 {
-	return 2;
+	return 2
 }
 
 func main() {}
