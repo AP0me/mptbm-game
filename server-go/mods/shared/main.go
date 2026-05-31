@@ -32,10 +32,41 @@ type CardProfile struct {
 }
 
 func GetInt(state *GameState, key string) int {
-	if val, ok := state.Data[key].(int); ok {
-		return val
-	}
-	return 0
+    if state.Data == nil {
+        return 0
+    }
+    
+    switch val := state.Data[key].(type) {
+    case int:
+        return int(val)
+    case float64:
+        return int(val)
+    case int64:
+        return int(val)
+    case float32:
+        return int(val)
+    default:
+        return 0
+    }
+}
+
+func GetFloat(state *GameState, key string) float64 {
+    if state.Data == nil {
+        return 0
+    }
+    
+    switch val := state.Data[key].(type) {
+    case int:
+        return float64(val)
+    case float64:
+        return float64(val)
+    case int64:
+        return float64(val)
+    case float32:
+        return float64(val)
+    default:
+        return 0
+    }
 }
 
 func GetString(state *GameState, key string) string {
