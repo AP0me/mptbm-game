@@ -2,10 +2,10 @@ package core
 
 import "game/server/mods/shared"
 
-func PlayableCards(deck map[string]*shared.Card, state *shared.GameState) map[string]*shared.Card {
+func PlayableCards(deck map[string]*shared.Card, state shared.GameState) map[string]*shared.Card {
 	playable := make(map[string]*shared.Card)
 	for key, card := range deck {
-		if card.Conditions(state) {
+		if card.Conditions(&state) { // TODO
 			playable[key] = card
 		}
 	}
@@ -16,8 +16,8 @@ func PlayableCards(deck map[string]*shared.Card, state *shared.GameState) map[st
 	return playable
 }
 
-func ChooseCard(p *shared.Player, playable map[string]*shared.Card, state *shared.GameState) *shared.Card {
-	key := p.Decide(state)
+func ChooseCard(p *shared.Player, playable map[string]*shared.Card, state shared.GameState) *shared.Card {
+	key := p.Decide(&state) // TODO
 	if card, ok := playable[key]; ok {
 		return card
 	}

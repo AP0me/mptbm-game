@@ -1,6 +1,9 @@
 package shared
 
-import "net"
+import (
+	"fmt"
+	"net"
+)
 
 type GameState struct {
 	Data map[string]interface{}
@@ -18,6 +21,10 @@ type Card struct {
 	Action     func(state *GameState)
 }
 
+type HostPlayer struct {
+	Name string `json:"name"`
+}
+
 func GetInt(state *GameState, key string) int {
 	if val, ok := state.Data[key].(int); ok {
 		return val
@@ -33,8 +40,12 @@ func GetString(state *GameState, key string) string {
 }
 
 func GetStringList(state *GameState, key string) []string {
-	if val, ok := state.Data[key].([]string); ok {
-		return val
+	if val, ok := state.Data[key].([]interface{}); ok {
+		list := make([]string, len(val))
+		for i, v := range val {
+			list[i] = fmt.Sprintf("%v", v)
+		}
+		return list
 	}
 	return []string{}
 }

@@ -33,7 +33,7 @@ func PacketMultiSend(conns []net.Conn, data interface{}, pType string) {
 	}
 }
 
-func SendState(state *shared.GameState, conns []net.Conn) {
+func SendState(state shared.GameState, conns []net.Conn) {
 	PacketMultiSend(conns, state.Data, "STATE")
 }
 

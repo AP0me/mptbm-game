@@ -15,11 +15,13 @@ func HumanInput(conn net.Conn) string {
 	return strings.TrimSpace(input)
 }
 
-func WelcomeHumansToPlayerList(playerOrder []string, ln net.Listener, players map[string]*shared.Player) {
+func WelcomeHumansToPlayerList(playerOrder []string, ln net.Listener, players map[string]*shared.Player, robots map[string]shared.HostPlayer) {
 	for {
 		remaining := []string{}
 		for _, name := range playerOrder {
-			if _, exists := players[name]; !exists {
+			_, isRobot := robots[name]
+			_, exists := players[name]
+			if !isRobot && !exists {
 				remaining = append(remaining, name)
 			}
 		}

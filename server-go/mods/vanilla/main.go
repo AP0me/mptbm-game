@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"game/server/mods/shared"
 	"math"
 	"math/rand"
 	"slices"
 	"time"
+	"unsafe"
 )
 
 func humanKeys() []string {
@@ -165,26 +167,40 @@ func ClearEventLogs(s *shared.GameState) {
 	s.Data["event_logs"] = []string{}
 }
 
-func InitState() *shared.GameState {
-	return &shared.GameState{
+//go:wasmexport InitState
+func InitState() uint64 {
+	state := &shared.GameState{
 		Data: map[string]interface{}{
-			"status":		"RUNNING",
-			"event_logs":	[]string{},
-			"invisible_keys": []string{"invisible_keys", "event_logs"},
-			"round":		 1,
-			"player_order":  slices.Concat(humanKeys(), robotKeys()),
-			"acting_player": "anar",
-			"date_time":	 time.Now().Format("2006-01-02 00:00:00"),
-			"anar.location": "forest",
-			"anar.energy":   100,
+			"status":          "RUNNING",
+			"event_logs":      []string{},
+			"invisible_keys":  []string{"invisible_keys", "event_logs"},
+			"round":           1,
+			"player_order":    slices.Concat(humanKeys(), robotKeys()),
+			"acting_player":   "anar",
+			"date_time":       time.Now().Format("2006-01-02 00:00:00"),
+			"anar.location":   "forest",
+			"anar.energy":     100,
 			"anar.max_energy": 100,
-			"elshad.location": "forest",
-			"elshad.energy":   100,
-			"elshad.max_energy": 100,
-			"forest.wood": 0,
-			"forest.food": 0,
+			"forest.wood":     0,
+			"forest.food":     0,
 		},
 	}
+	
+	buf, err := json.Marshal(state)
+	if err != nil {
+		return 0
+	}
+	
+	ptr := uint32(uintptr(slicePtr(buf)))
+	size := uint32(len(buf))
+	return (uint64(ptr) << 32) | uint64(size)
+}
+
+func slicePtr(b []byte) unsafe.Pointer {
+	if len(b) == 0 {
+		return nil
+	}
+	return unsafe.Pointer(&b[0])
 }
 
 func InitRobots() map[string]*shared.Player {
@@ -196,6 +212,24 @@ func InitRobots() map[string]*shared.Player {
 			},
 		},
 	}
+}
+
+//go:wasmexport InitRobotsNames
+func InitRobotsNames() uint64 {
+    robots := InitRobots()
+    names := map[string]shared.HostPlayer{};
+    for name := range robots {
+        names[name] = shared.HostPlayer{Name: name}
+    }
+
+    buf, err := json.Marshal(names)
+    if err != nil {
+        return 0
+    }
+
+    ptr := uint32(uintptr(unsafe.Pointer(&buf[0])))
+    size := uint32(len(buf))
+    return (uint64(ptr) << 32) | uint64(size)
 }
 
 func InitDeck(s *shared.GameState) map[string]*shared.Card {
@@ -482,6 +516,11 @@ func InitDeck(s *shared.GameState) map[string]*shared.Card {
 			},
 		},
 	}
+}
+
+//go:wasmexport Return2
+func Return2() int32 {
+	return 2;
 }
 
 func main() {}
