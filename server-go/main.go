@@ -236,17 +236,15 @@ func main() {
 
 		playable_cards, _ := CallPlayableCards(ctx, instance, state)
 
+		card_key := "skip"
 		if player.Conn != nil {
 			core.SendCards(playable_cards, player.Conn)
+			if player.Decide == nil {
+				card_key = core.HumanInput(player.Conn)
+			} else {
+				card_key, _ = CallChooseCard(ctx, instance, acting_name, state)
+			}
 		}
-
-		card_key := "skip"
-		if player.Decide == nil {
-			card_key = core.HumanInput(player.Conn)
-		} else {
-			card_key, _ = CallChooseCard(ctx, instance, acting_name, state)
-		}
-		fmt.Println(acting_name, card_key)
 		
 		newState, err := CallPlayCardAction(ctx, instance, card_key, state)
 		if err != nil {

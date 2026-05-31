@@ -52,8 +52,13 @@ func GetStringList(state *GameState, key string) []string {
 			list[i] = fmt.Sprintf("%v", v)
 		}
 		return list
-	}
-	return []string{}
+	} else {
+        // Add this fallback check for native string slices
+        if val, ok := state.Data[key].([]string); ok {
+            return val
+        }
+        return []string{}
+    }
 }
 
 func GetBool(state *GameState, key string) bool {
