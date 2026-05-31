@@ -8,6 +8,7 @@ import (
 	"game/server/mods/shared"
 	"net"
 	"os"
+	"time"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
@@ -105,6 +106,77 @@ func WasmInitRobotsNames(instance api.Module, ctx context.Context) map[string]sh
 	return robotMap
 }
 
+func writeToWasm(ctx context.Context, instance api.Module, allocator api.Function, data any) (uint32, uint32, error) {
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		return 0, 0, err
+	}
+	size := uint32(len(bytes))
+
+	// Ask WASM to allocate memory for this payload
+	res, err := allocator.Call(ctx, uint64(size))
+	if err != nil {
+		return 0, 0, err
+	}
+	ptr := uint32(res[0])
+
+	// Write the JSON bytes into that allocated sandbox slot
+	instance.Memory().Write(ptr, bytes)
+	return ptr, size, nil
+}
+
+func CallPlayableCards(ctx context.Context, instance api.Module, hostState any) (map[string]shared.CardProfile, error) {
+    allocator := instance.ExportedFunction("Allocate")
+    playableCardsFn := instance.ExportedFunction("PlayableCards")
+
+    ptr, size, err := writeToWasm(ctx, instance, allocator, hostState)
+    if err != nil {
+        return nil, err
+    }
+
+    res, err := playableCardsFn.Call(ctx, uint64(ptr), uint64(size))
+    if err != nil {
+        return nil, err
+    }
+
+    outPtr := uint32(res[0] >> 32)
+    outSize := uint32(res[0])
+    outBytes, _ := instance.Memory().Read(outPtr, outSize)
+
+    // Unmarshal directly into the correct type
+    var playable map[string]shared.CardProfile
+    if err := json.Unmarshal(outBytes, &playable); err != nil {
+        return nil, err
+    }
+    
+    return playable, nil
+}
+
+func CallChooseCard(ctx context.Context, instance api.Module, playerName string, hostState any) (map[string]any, error) {
+    allocator := instance.ExportedFunction("Allocate")
+    chooseCardFn := instance.ExportedFunction("ChooseCard")
+
+    // 1. Write the player NAME string and state into the memory heap
+    // (writeToWasm will turn the string into a JSON string like "round")
+    pPtr, pSize, _ := writeToWasm(ctx, instance, allocator, playerName)
+    sPtr, sSize, _ := writeToWasm(ctx, instance, allocator, hostState)
+
+    // 2. Invoke the choice calculation function
+    res, err := chooseCardFn.Call(ctx, uint64(pPtr), uint64(pSize), uint64(sPtr), uint64(sSize))
+    if err != nil {
+        return nil, err
+    }
+
+    // 3. Read back the single chosen card profile
+    outPtr := uint32(res[0] >> 32)
+    outSize := uint32(res[0])
+    outBytes, _ := instance.Memory().Read(outPtr, outSize)
+
+    var chosenCard map[string]any
+    _ = json.Unmarshal(outBytes, &chosenCard)
+    return chosenCard, nil
+}
+
 func main() {
 	ctx := context.Background()
 	runtime, instance, err := LoadWasmInstance(ctx, "mods/vanilla/vanilla.wasm")
@@ -119,7 +191,6 @@ func main() {
 
 	state := WasmInitState(instance, ctx)
 	robots := WasmInitRobotsNames(instance, ctx)
-	// deck := initDeck()
 
 	players := map[string]*shared.Player{}
 	core.WelcomeHumansToPlayerList(shared.GetStringList(&state, "player_order"), ln, players, robots)
@@ -127,17 +198,18 @@ func main() {
 
 	for state.Data["status"] == "RUNNING" {
 		acting_name := shared.GetActingPlayer(&state)
-		// player := players[acting_name]
-		_ = players[acting_name]
+		player := players[acting_name]
 		core.SendState(state, conns)
 
-		// playable_cards := core.PlayableCards(deck, state) // TODO
+		playable_cards, _ := CallPlayableCards(ctx, instance, state)
 
-		// if player.Conn != nil {
-		// 	core.SendCards(playable_cards, player.Conn)
-		// }
+        if player.Conn != nil {
+            core.SendCards(playable_cards, player.Conn)
+        }
 
-		// card := core.ChooseCard(player, playable_cards, state)
+		card_key, _ := CallChooseCard(ctx, instance, acting_name, state)
+		fmt.Println(acting_name, card_key)
+		time.Sleep(1000 * time.Millisecond)
 		// card.Action(&state) // TODO
 
 		core.SendMessages(shared.GetStringList(&state, "event_logs"), conns)

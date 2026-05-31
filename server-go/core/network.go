@@ -37,7 +37,7 @@ func SendState(state shared.GameState, conns []net.Conn) {
 	PacketMultiSend(conns, state.Data, "STATE")
 }
 
-func SendCards(playableCards map[string]*shared.Card, conn net.Conn) {
+func SendCards(playableCards map[string]shared.CardProfile, conn net.Conn) {
 	cardNames := make(map[string]map[string]string)
 	for key, card := range playableCards {
 		cardNames[key] = map[string]string{"name": card.Name}

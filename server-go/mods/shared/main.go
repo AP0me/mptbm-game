@@ -25,6 +25,10 @@ type HostPlayer struct {
 	Name string `json:"name"`
 }
 
+type CardProfile struct {
+	Name string `json:"name"`
+}
+
 func GetInt(state *GameState, key string) int {
 	if val, ok := state.Data[key].(int); ok {
 		return val

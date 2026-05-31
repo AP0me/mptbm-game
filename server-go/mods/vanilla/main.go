@@ -218,8 +218,8 @@ func InitRobots() map[string]*shared.Player {
 func InitRobotsNames() uint64 {
     robots := InitRobots()
     names := map[string]shared.HostPlayer{};
-    for name := range robots {
-        names[name] = shared.HostPlayer{Name: name}
+    for name, player := range robots {
+        names[name] = shared.HostPlayer{Name: player.Name}
     }
 
     buf, err := json.Marshal(names)
@@ -516,6 +516,139 @@ func InitDeck(s *shared.GameState) map[string]*shared.Card {
 			},
 		},
 	}
+}
+
+var (
+    lastPlayableCardsOutput []byte
+    lastChooseCardOutput    []byte
+)
+
+// Global map to pin memory allocated for INCOMING host payloads
+var activeAllocations = make(map[uint32][]byte)
+
+//go:wasmexport Allocate
+func Allocate(size uint32) uint32 {
+    if size == 0 {
+        return 0
+    }
+    
+    // Allocate slice safely
+    buf := make([]byte, size)
+    ptr := uint32(uintptr(unsafe.Pointer(unsafe.SliceData(buf))))
+    
+    // PIN THE MEMORY: Store it globally so the GC cannot reclaim it
+    activeAllocations[ptr] = buf
+    
+    return ptr
+}
+
+//go:wasmexport PlayableCards
+func PlayableCards(statePtr uint32, stateSize uint32) uint64 {
+    stateBytes := unsafe.Slice((*byte)(unsafe.Pointer(uintptr(statePtr))), stateSize)
+    
+    var state shared.GameState
+    if err := json.Unmarshal(stateBytes, &state); err != nil {
+        return 0
+    }
+    
+    // CLEANUP: We parsed the JSON, the host input data is no longer needed
+    delete(activeAllocations, statePtr)
+
+    // Run game logic
+    playable := make(map[string]shared.CardProfile)
+    deck := InitDeck(&state)
+    for key, card := range deck {
+        if card.Conditions(&state) {
+            playable[key] = shared.CardProfile{Name: card.Name}
+        }
+    }
+
+    if len(playable) == 0 {
+        playable["skip"] = shared.CardProfile{Name: "Skip"}
+    }
+
+    buf, err := json.Marshal(playable)
+    if err != nil {
+        return 0
+    }
+
+    // Keep alive globally, return packed pointer
+    lastPlayableCardsOutput = buf
+    ptr := uint32(uintptr(unsafe.Pointer(unsafe.SliceData(lastPlayableCardsOutput))))
+    size := uint32(len(lastPlayableCardsOutput))
+    return (uint64(ptr) << 32) | uint64(size)
+}
+
+// Cache the robots registry so we don't rebuild the map on every single turn
+var localRobots map[string]*shared.Player
+
+//go:wasmexport ChooseCard
+func ChooseCard(namePtr uint32, nameSize uint32, statePtr uint32, stateSize uint32) uint64 {
+    // 1. Parse Player Name and GameState data
+    nameBytes := unsafe.Slice((*byte)(unsafe.Pointer(uintptr(namePtr))), nameSize)
+    var playerName string
+    if err := json.Unmarshal(nameBytes, &playerName); err != nil {
+        return 0
+    }
+
+    stateBytes := unsafe.Slice((*byte)(unsafe.Pointer(uintptr(statePtr))), stateSize)
+    var state shared.GameState
+    if err := json.Unmarshal(stateBytes, &state); err != nil {
+        return 0
+    }
+
+    // CLEANUP: Free host input structures
+    delete(activeAllocations, namePtr)
+    delete(activeAllocations, statePtr)
+
+    // 2. Instantiate local robots registry if it doesn't exist yet
+    if localRobots == nil {
+        localRobots = InitRobots()
+    }
+
+    // 3. Find the local robot execution logic
+    robot, exists := localRobots[playerName]
+    if !exists || robot.Decide == nil {
+        // If it's a human player or unknown robot, default to a Skip payload
+        return returnDefaultSkip()
+    }
+
+    // 4. Execute decision logic safely INSIDE the WASM context
+    key := robot.Decide(&state)
+    
+    // Check what cards are valid right now
+    playable := make(map[string]shared.CardProfile)
+    deck := InitDeck(&state)
+    for k, card := range deck {
+        if card.Conditions(&state) {
+            playable[k] = shared.CardProfile{Name: card.Name}
+        }
+    }
+
+    // 5. Determine the choice and return the profile target
+    chosenCard, ok := playable[key]
+    if !ok {
+        chosenCard = shared.CardProfile{Name: "Skip"}
+    }
+
+    buf, err := json.Marshal(chosenCard)
+    if err != nil {
+        return 0
+    }
+
+    lastChooseCardOutput = buf
+    ptr := uint32(uintptr(unsafe.Pointer(unsafe.SliceData(lastChooseCardOutput))))
+    size := uint32(len(lastChooseCardOutput))
+    return (uint64(ptr) << 32) | uint64(size)
+}
+
+// Helper to handle safe failures
+func returnDefaultSkip() uint64 {
+    buf, _ := json.Marshal(shared.CardProfile{Name: "Skip"})
+    lastChooseCardOutput = buf
+    ptr := uint32(uintptr(unsafe.Pointer(unsafe.SliceData(lastChooseCardOutput))))
+    size := uint32(len(lastChooseCardOutput))
+    return (uint64(ptr) << 32) | uint64(size)
 }
 
 //go:wasmexport Return2
