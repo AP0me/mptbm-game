@@ -528,6 +528,11 @@ func ChooseCard(namePtr uint32, nameSize uint32, statePtr uint32, stateSize uint
 	return shared.ChooseCard(InitRobots(), InitDeck(), namePtr, nameSize, statePtr, stateSize)
 }
 
+//go:wasmexport PlayCardAction
+func PlayCardAction(keyPtr uint32, keySize uint32, statePtr uint32, stateSize uint32) uint64 {
+	return shared.PlayCardAction(InitDeck(), keyPtr, keySize, statePtr, stateSize)
+}
+
 //go:wasmexport Return2
 func Return2() int32 {
 	return 2;

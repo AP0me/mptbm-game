@@ -174,6 +174,42 @@ func CallChooseCard(ctx context.Context, instance api.Module, playerName string,
     return string(outBytes), nil
 }
 
+func CallPlayCardAction(ctx context.Context, instance api.Module, cardKey string, hostState any) (shared.GameState, error) {
+	allocator := instance.ExportedFunction("Allocate")
+	playCardFn := instance.ExportedFunction("PlayCardAction")
+
+	// 1. Write the card key and current state to WASM memory
+	kPtr, kSize, err := writeToWasm(ctx, instance, allocator, cardKey)
+	if err != nil {
+		return shared.GameState{}, err
+	}
+	sPtr, sSize, err := writeToWasm(ctx, instance, allocator, hostState)
+	if err != nil {
+		return shared.GameState{}, err
+	}
+
+	// 2. Call the action execution
+	res, err := playCardFn.Call(ctx, uint64(kPtr), uint64(kSize), uint64(sPtr), uint64(sSize))
+	if err != nil {
+		return shared.GameState{}, err
+	}
+
+	// 3. Read back the updated GameState
+	outPtr := uint32(res[0] >> 32)
+	outSize := uint32(res[0])
+	outBytes, ok := instance.Memory().Read(outPtr, outSize)
+	if !ok {
+		return shared.GameState{}, fmt.Errorf("failed to read updated state memory")
+	}
+
+	var updatedState shared.GameState
+	if err := json.Unmarshal(outBytes, &updatedState); err != nil {
+		return shared.GameState{}, err
+	}
+
+	return updatedState, nil
+}
+
 func main() {
 	ctx := context.Background()
 	runtime, instance, err := LoadWasmInstance(ctx, "mods/vanilla/vanilla.wasm")
@@ -211,7 +247,13 @@ func main() {
 			card_key, _ = CallChooseCard(ctx, instance, acting_name, state)
 		}
 		fmt.Println(acting_name, card_key)
-		// card.Action(&state) // TODO
+		
+		newState, err := CallPlayCardAction(ctx, instance, card_key, state)
+		if err != nil {
+			fmt.Printf("Error playing card action: %v\n", err)
+			continue
+		}
+		state = newState
 
 		core.SendMessages(shared.GetStringList(&state, "event_logs"), conns)
 		state.Data["event_logs"] = []string{}

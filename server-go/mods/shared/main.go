@@ -176,3 +176,43 @@ func returnRawString(val string) uint64 {
     size := uint32(len(lastChooseCardOutput))
     return (uint64(ptr) << 32) | uint64(size)
 }
+
+// Add this near your other last*Output variables
+var lastPlayCardOutput []byte
+
+// Add this function to handle the action execution
+func PlayCardAction(deck map[string]*Card, keyPtr uint32, keySize uint32, statePtr uint32, stateSize uint32) uint64 {
+	// 1. Parse Card Key
+	keyBytes := unsafe.Slice((*byte)(unsafe.Pointer(uintptr(keyPtr))), keySize)
+	var cardKey string
+	if err := json.Unmarshal(keyBytes, &cardKey); err != nil {
+		return 0
+	}
+
+	// 2. Parse GameState
+	stateBytes := unsafe.Slice((*byte)(unsafe.Pointer(uintptr(statePtr))), stateSize)
+	var state GameState
+	if err := json.Unmarshal(stateBytes, &state); err != nil {
+		return 0
+	}
+
+	// CLEANUP: Free host input structures
+	delete(activeAllocations, keyPtr)
+	delete(activeAllocations, statePtr)
+
+	// 3. Execute the Action
+	if card, exists := deck[cardKey]; exists && card.Action != nil {
+		card.Action(&state)
+	}
+
+	// 4. Marshal and return the updated state
+	buf, err := json.Marshal(state)
+	if err != nil {
+		return 0
+	}
+
+	lastPlayCardOutput = buf
+	ptr := uint32(uintptr(unsafe.Pointer(unsafe.SliceData(lastPlayCardOutput))))
+	size := uint32(len(lastPlayCardOutput))
+	return (uint64(ptr) << 32) | uint64(size)
+}
