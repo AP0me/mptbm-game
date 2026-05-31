@@ -1,2 +1,2 @@
-cd server-go/mods/vanilla
-go build -buildmode=plugin -o vanilla.so main.go
+GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o mods/vanilla/vanilla.wasm mods/vanilla/main.go
+go run .

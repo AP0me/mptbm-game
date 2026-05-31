@@ -8,7 +8,6 @@ import (
 	"game/server/mods/shared"
 	"net"
 	"os"
-	"time"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
