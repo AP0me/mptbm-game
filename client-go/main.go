@@ -10,8 +10,8 @@ import (
 )
 
 type Packet struct {
-	Type string                 `json:"type"`
-	Data interface{}            `json:"data"`
+	Type string `json:"type"`
+	Data any    `json:"data"`
 }
 
 func ConnectToServer() net.Conn {
@@ -69,11 +69,11 @@ func main() {
 
 		switch packet.Type {
 		case "STATE":
-			if data, ok := packet.Data.(map[string]interface{}); ok {
+			if data, ok := packet.Data.(map[string]any); ok {
 				PrintState(data)
 			}
 		case "CARDS":
-			if data, ok := packet.Data.(map[string]interface{}); ok {
+			if data, ok := packet.Data.(map[string]any); ok {
 				PrintCards(data)
 			}
 		case "CHOICE":
@@ -81,7 +81,7 @@ func main() {
 			choice, _ := stdinReader.ReadString('\n')
 			conn.Write([]byte(choice))
 		case "MESSAGE":
-			if data, ok := packet.Data.([]interface{}); ok {
+			if data, ok := packet.Data.([]any); ok {
 				PrintCardResponse(data)
 			}
 		}

@@ -36,7 +36,7 @@ func CenterText(text string, width int) string {
 	return strings.Repeat(" ", paddingLeft) + text + strings.Repeat(" ", paddingRight)
 }
 
-func PrintState(state map[string]interface{}) {
+func PrintState(state map[string]any) {
 	// Clear screen and home cursor
 	fmt.Print("\033[H\033[J")
 
@@ -47,7 +47,7 @@ func PrintState(state map[string]interface{}) {
 
 	// Handle invisible keys filter
 	invisible := make(map[string]bool)
-	if inv, ok := state["invisible_keys"].([]interface{}); ok {
+	if inv, ok := state["invisible_keys"].([]any); ok {
 		for _, v := range inv {
 			if s, ok := v.(string); ok {
 				invisible[s] = true
@@ -89,7 +89,7 @@ func PrintState(state map[string]interface{}) {
 	fmt.Printf("%s%s╚%s╝%s\n", Cyan, Bold, strings.Repeat("═", boxWidth), Reset)
 }
 
-func PrintCards(cards map[string]interface{}) {
+func PrintCards(cards map[string]any) {
 	boxWidth := 44
 	// Top Border: 4 placeholders, 4 variables
 	fmt.Printf("\n%s%s╔%s╗%s\n", Magenta, Bold, strings.Repeat("═", boxWidth), Reset)
@@ -97,7 +97,7 @@ func PrintCards(cards map[string]interface{}) {
 	fmt.Printf("%s%s╠%s╣%s\n", Magenta, Bold, strings.Repeat("═", boxWidth), Reset)
 
 	for key, val := range cards {
-		cardData := val.(map[string]interface{})
+		cardData := val.(map[string]any)
 		name := cardData["name"].(string)
 
 		cleanText := fmt.Sprintf("%s: %s", key, name)
@@ -109,8 +109,8 @@ func PrintCards(cards map[string]interface{}) {
 		// Line Content: 14 placeholders, 14 variables
 		// 1(%s) 2(%s) ║ 3(%s) 4(%s) 5(%s) 6(%s) : 7(%s) 8(%s) 9(%s) 10(%s) 11(%s) 12(%s) 13(%s) ║ 14(%s)
 		fmt.Printf("%s%s║%s %s%s%s: %s%s%s%s %s%s%s ║%s\n",
-			Magenta, Bold, Reset,    // 1, 2, 3
-			Bold, Yellow, key,       // 4, 5, 6
+			Magenta, Bold, Reset, // 1, 2, 3
+			Bold, Yellow, key, // 4, 5, 6
 			Bold, Cyan, name, Reset, // 7, 8, 9, 10
 			strings.Repeat(" ", padding), Magenta, Bold, // 11, 12, 13
 			Reset) // 14
@@ -128,7 +128,7 @@ func TypeWrite(text string) {
 	fmt.Println()
 }
 
-func PrintCardResponse(messages []interface{}) {
+func PrintCardResponse(messages []any) {
 	for _, msg := range messages {
 		if m, ok := msg.(string); ok {
 			fmt.Printf("%s%s» ", White, Bold)

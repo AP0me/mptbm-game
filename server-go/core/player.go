@@ -9,7 +9,7 @@ import (
 )
 
 func HumanInput(conn net.Conn) string {
-	SafeSend(conn, map[string]interface{}{}, "CHOICE")
+	SafeSend(conn, map[string]any{}, "CHOICE")
 	reader := bufio.NewReader(conn)
 	input, _ := reader.ReadString('\n')
 	return strings.TrimSpace(input)
@@ -37,8 +37,8 @@ func WelcomeHumansToPlayerList(playerOrder []string, ln net.Listener, players ma
 
 		name := remaining[0]
 		players[name] = &shared.Player{
-			Name: name,
-			Conn: conn,
+			Name:   name,
+			Conn:   conn,
 			Decide: nil,
 		}
 

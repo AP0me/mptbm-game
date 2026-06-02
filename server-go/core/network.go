@@ -8,11 +8,11 @@ import (
 )
 
 type Packet struct {
-	Type string      `json:"type"`
-	Data interface{} `json:"data"`
+	Type string `json:"type"`
+	Data any    `json:"data"`
 }
 
-func SafeSend(conn net.Conn, data interface{}, pType string) bool {
+func SafeSend(conn net.Conn, data any, pType string) bool {
 	packet := Packet{Type: pType, Data: data}
 	encoded, err := json.Marshal(packet)
 	if err != nil {
@@ -27,7 +27,7 @@ func SafeSend(conn net.Conn, data interface{}, pType string) bool {
 	return true
 }
 
-func PacketMultiSend(conns []net.Conn, data interface{}, pType string) {
+func PacketMultiSend(conns []net.Conn, data any, pType string) {
 	for _, conn := range conns {
 		SafeSend(conn, data, pType)
 	}

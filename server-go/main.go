@@ -254,6 +254,5 @@ func main() {
 		state = newState
 
 		core.SendMessages(shared.GetStringList(&state, "event_logs"), conns)
-		state.Data["event_logs"] = []string{}
 	}
 }

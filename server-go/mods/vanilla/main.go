@@ -31,11 +31,16 @@ func isHuman(p string) bool {
 	return slices.Contains(humanKeys(), p)
 }
 
+func StateSet(s *shared.GameState, key string, val any) {
+	s.Data["key_order"] = append(shared.GetStringList(s, "key_order"), key)
+	s.Data[key] = val
+}
+
 func PropedSet(s *shared.GameState, key string, val int) {
 	if val < 0 {
 		val = 0
 	}
-	s.Data[key] = val
+	StateSet(s, key, val)
 }
 
 func PlayerDotKey(s *shared.GameState, key string) string {
@@ -50,7 +55,7 @@ func LocalDotKey(s *shared.GameState, key string) string {
 
 func LogEvent(s *shared.GameState, msg string) {
 	logs := shared.GetStringList(s, "event_logs")
-	s.Data["event_logs"] = append(logs, msg)
+	StateSet(s, "event_logs", append(logs, msg))
 }
 
 func EndTurn(s *shared.GameState) {
@@ -63,7 +68,7 @@ func EndTurn(s *shared.GameState) {
 			break
 		}
 	}
-	s.Data["acting_player"] = order[nextIdx]
+	StateSet(s, "acting_player", order[nextIdx])
 }
 
 func RemovePlayers(s *shared.GameState, playerKeys []string) {
@@ -76,7 +81,7 @@ func RemovePlayers(s *shared.GameState, playerKeys []string) {
 		}
 	}
 
-	s.Data["player_order"] = newOrder
+	StateSet(s, "player_order", newOrder)
 }
 
 func AddEnergy(s *shared.GameState, amount int, deathMsg string) bool {
@@ -128,7 +133,7 @@ func LightLevel(s *shared.GameState) int {
 func TimePasses(s *shared.GameState, minutes int) bool {
 	t, _ := time.Parse("2006-01-02 15:04:05", shared.GetString(s, "date_time"))
 	newTime := t.Add(time.Duration(minutes) * time.Minute)
-	s.Data["date_time"] = newTime.Format("2006-01-02 15:04:05")
+	StateSet(s, "date_time", newTime.Format("2006-01-02 15:04:05"))
 
 	// 2. Decay fires across all human player locations
 	humans := []string{"anar", "elshad"}
@@ -164,13 +169,22 @@ func TimePasses(s *shared.GameState, minutes int) bool {
 }
 
 func ClearEventLogs(s *shared.GameState) {
-	s.Data["event_logs"] = []string{}
+	StateSet(s, "event_logs", []string{})
 }
 
 //go:wasmexport InitState
 func InitState() uint64 {
 	state := &shared.GameState{
-		Data: map[string]interface{}{
+		Data: map[string]any{
+			"key_order": []string{
+				"status",
+				"event_logs",
+				"invisible_keys",
+				"round",
+				"player_order",
+				"acting_player",
+				"date_time",
+			},
 			"status":         "RUNNING",
 			"event_logs":     []string{},
 			"invisible_keys": []string{"invisible_keys", "event_logs"},
@@ -178,15 +192,13 @@ func InitState() uint64 {
 			"player_order":   slices.Concat(humanKeys(), robotKeys()),
 			"acting_player":  "anar",
 			"date_time":      time.Now().Format("2006-01-02 00:00:00"),
-			"forest.wood":    0,
-			"forest.food":    0,
 		},
 	}
 	for _, human_key := range humanKeys() {
-		state.Data[human_key+".location"] = "forest"
-		state.Data[human_key+".max_energy"] = 100
-		state.Data[human_key+".energy"] = 100
-		state.Data["invisible_keys"] = append(shared.GetStringList(state, "invisible_keys"), human_key+".sleeping")
+		StateSet(state, human_key+".location", "forest")
+		StateSet(state, human_key+".max_energy", 100)
+		StateSet(state, human_key+".energy", 100)
+		StateSet(state, "invisible_keys", append(shared.GetStringList(state, "invisible_keys"), human_key+".sleeping"))
 	}
 
 	buf, err := json.Marshal(state)
@@ -331,7 +343,7 @@ func InitDeck() map[string]*shared.Card {
 					return
 				}
 
-				state.Data[LocalDotKey(state, "shelter")] = true
+				StateSet(state, "shelter", true)
 				PropedSet(state, LocalDotKey(state, "wood"), shared.GetInt(state, LocalDotKey(state, "wood"))-50)
 
 				LogEvent(state, "The player built a shelter.")
@@ -352,7 +364,7 @@ func InitDeck() map[string]*shared.Card {
 					return
 				}
 
-				state.Data[LocalDotKey(state, "boat")] = true
+				StateSet(state, "boat", true)
 				PropedSet(state, LocalDotKey(state, "wood"), shared.GetInt(state, LocalDotKey(state, "wood"))-250)
 
 				LogEvent(state, "The player built a boat.")
@@ -378,7 +390,7 @@ func InitDeck() map[string]*shared.Card {
 				}
 
 				if SunLightLevel(state) > 6 && !shared.GetBool(state, "bottle_map") {
-					state.Data["bottle_map"] = true
+					StateSet(state, "bottle_map", true)
 					LogEvent(state, "The player fishes out a map in a bottle!")
 					return
 				}
@@ -442,7 +454,7 @@ func InitDeck() map[string]*shared.Card {
 				PropedSet(state, LocalDotKey(state, "fire_minutes"), fire-60)
 
 				newLoc := "caves"
-				state.Data[PlayerDotKey(state, "location")] = newLoc
+				StateSet(state, PlayerDotKey(state, "location"), newLoc)
 
 				PropedSet(state, newLoc+".food", shared.GetInt(state, newLoc+".food")+food)
 				PropedSet(state, newLoc+".wood", shared.GetInt(state, newLoc+".wood")+wood)
@@ -459,7 +471,7 @@ func InitDeck() map[string]*shared.Card {
 			Action: func(state *shared.GameState) {
 				ClearEventLogs(state)
 
-				state.Data[PlayerDotKey(state, "sleeping")] = true
+				StateSet(state, PlayerDotKey(state, "sleeping"), true)
 				hasFire := shared.GetInt(state, LocalDotKey(state, "fire_minutes")) > 0
 
 				if TimePasses(state, 8*60) {
