@@ -43,9 +43,9 @@ func StateInvisibleSet(s *shared.GameState, key string, val any) {
 }
 
 func StateSet(s *shared.GameState, key string, val any) {
-	display_order := shared.GetString(s, "display_order")
-	if display_order == "" {
-		s.Data["display_order"] = append(shared.GetStringList(s, "display_order"), key)
+	display_order := shared.GetStringList(s, "display_order")
+	if !slices.Contains(display_order, key) {
+		s.Data["display_order"] = append(display_order, key)
 	}
 	StateInvisibleSet(s, key, val)
 }
@@ -235,15 +235,6 @@ func InitDeck() map[string]*shared.Card {
 				ClearEventLogs(state)
 				EndTurn(state)
 				LogEvent(state, "Let's see what else is happening.")
-			},
-		},
-		"skip1": {
-			Name:       "Skip1",
-			Conditions: func(state *shared.GameState) bool { return true },
-			Action: func(state *shared.GameState) {
-				ClearEventLogs(state)
-				EndTurn(state)
-				LogEvent(state, "Let's see 1111what else 111is happening11111.")
 			},
 		},
 		"eat": {

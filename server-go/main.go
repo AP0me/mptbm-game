@@ -34,14 +34,15 @@ func main() {
 
 		playable_cards, _ := core.CallPlayableCards(ctx, instance, state)
 
-		card_key := "skip"
 		if player.Conn != nil {
 			core.SendCards(playable_cards, player.Conn)
-			if player.Decide == nil {
-				card_key = core.HumanInput(player.Conn)
-			} else {
-				card_key, _ = core.CallChooseCard(ctx, instance, acting_name, state)
-			}
+		}
+		
+		card_key := "skip"
+		if _, ok := robots[acting_name]; ok {
+			card_key, err = core.CallChooseCard(ctx, instance, acting_name, state)
+		} else {
+			card_key = core.HumanInput(player.Conn)
 		}
 		
 		newState, err := core.CallPlayCardAction(ctx, instance, card_key, state)

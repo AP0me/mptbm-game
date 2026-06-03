@@ -182,13 +182,13 @@ func ChooseCard(localRobots map[string]*Player, deck map[string]*Card, namePtr u
 	nameBytes := unsafe.Slice((*byte)(unsafe.Pointer(uintptr(namePtr))), nameSize)
 	var playerName string
 	if err := json.Unmarshal(nameBytes, &playerName); err != nil {
-		return returnRawString("skip1")
+		return returnRawString("skip")
 	}
 
 	stateBytes := unsafe.Slice((*byte)(unsafe.Pointer(uintptr(statePtr))), stateSize)
 	var state GameState
 	if err := json.Unmarshal(stateBytes, &state); err != nil {
-		return returnRawString("skip1")
+		return returnRawString("skip")
 	}
 
 	// CLEANUP: Free host input structures
@@ -198,7 +198,7 @@ func ChooseCard(localRobots map[string]*Player, deck map[string]*Card, namePtr u
 	// 3. Find the local robot execution logic
 	robot, exists := localRobots[playerName]
 	if !exists || robot.Decide == nil {
-		return returnRawString("skip1")
+		return returnRawString("skip")
 	}
 
 	// 4. Execute decision logic safely INSIDE the WASM context
