@@ -32,7 +32,7 @@ func isHuman(p string) bool {
 }
 
 func StateInvisibleSet(s *shared.GameState, key string, val any) {
-	if (val == nil) {
+	if val == nil {
 		delete(s.Data, key)
 		return
 	}
@@ -208,13 +208,6 @@ func InitState() *shared.GameState {
 	}
 
 	return state
-}
-
-func slicePtr(b []byte) unsafe.Pointer {
-	if len(b) == 0 {
-		return nil
-	}
-	return unsafe.Pointer(&b[0])
 }
 
 func InitRobots() map[string]*shared.Player {
@@ -521,7 +514,14 @@ func InitMarshaledState() uint64 {
 		return 0
 	}
 
-	ptr := uint32(uintptr(slicePtr(buf)))
+	// func slicePtr() unsafe.Pointer {
+	var b []byte = buf
+	slicedBufPtr := unsafe.Pointer(&b[0])
+	if len(b) == 0 {
+		slicedBufPtr = nil
+	}
+
+	ptr := uint32(uintptr(slicedBufPtr))
 	size := uint32(len(buf))
 	return (uint64(ptr) << 32) | uint64(size)
 }
