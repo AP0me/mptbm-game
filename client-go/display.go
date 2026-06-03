@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -37,6 +36,7 @@ func CenterText(text string, width int) string {
 }
 
 func PrintState(state map[string]any) {
+	key_order := state["key_order"].([]string)
 	// Clear screen and home cursor
 	fmt.Print("\033[H\033[J")
 
@@ -55,16 +55,7 @@ func PrintState(state map[string]any) {
 		}
 	}
 
-	// Sort keys for consistent display
-	keys := make([]string, 0, len(state))
-	for k := range state {
-		if !invisible[k] {
-			keys = append(keys, k)
-		}
-	}
-	sort.Strings(keys)
-
-	for _, k := range keys {
+	for _, k := range key_order {
 		val := state[k]
 		valBytes, _ := json.Marshal(val)
 		valStr := string(valBytes)
