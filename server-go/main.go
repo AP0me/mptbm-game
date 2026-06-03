@@ -35,15 +35,15 @@ func LoadWasmInstance(ctx context.Context, path string) (wazero.Runtime, api.Mod
 func WasmInitState(instance api.Module, ctx context.Context) shared.GameState {
 	var state shared.GameState
 
-	InitState := instance.ExportedFunction("InitState")
-	if InitState == nil {
-		fmt.Println("Exported function 'InitState' not found")
+	InitMarshaledState := instance.ExportedFunction("InitMarshaledState")
+	if InitMarshaledState == nil {
+		fmt.Println("Exported function 'InitMarshaledState' not found")
 		return state
 	}
 
-	results, err := InitState.Call(ctx)
+	results, err := InitMarshaledState.Call(ctx)
 	if err != nil {
-		fmt.Printf("Error calling InitState: %v\n", err)
+		fmt.Printf("Error calling InitMarshaledState: %v\n", err)
 		return state
 	}
 

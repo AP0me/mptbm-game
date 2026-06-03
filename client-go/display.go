@@ -36,7 +36,7 @@ func CenterText(text string, width int) string {
 }
 
 func PrintState(state map[string]any) {
-	key_order := state["key_order"].([]string)
+	display_order := state["display_order"].([]string)
 	// Clear screen and home cursor
 	fmt.Print("\033[H\033[J")
 
@@ -45,17 +45,7 @@ func PrintState(state map[string]any) {
 	fmt.Printf("%s%s║%s║%s\n", Bold, Cyan, CenterText("~ GAME STATE ~", boxWidth), Reset)
 	fmt.Printf("%s%s╠%s╣%s\n", Cyan, Bold, strings.Repeat("═", boxWidth), Reset)
 
-	// Handle invisible keys filter
-	invisible := make(map[string]bool)
-	if inv, ok := state["invisible_keys"].([]any); ok {
-		for _, v := range inv {
-			if s, ok := v.(string); ok {
-				invisible[s] = true
-			}
-		}
-	}
-
-	for _, k := range key_order {
+	for _, k := range display_order {
 		val := state[k]
 		valBytes, _ := json.Marshal(val)
 		valStr := string(valBytes)

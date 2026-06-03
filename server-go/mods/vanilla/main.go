@@ -31,9 +31,18 @@ func isHuman(p string) bool {
 	return slices.Contains(humanKeys(), p)
 }
 
-func StateSet(s *shared.GameState, key string, val any) {
-	s.Data["key_order"] = append(shared.GetStringList(s, "key_order"), key)
+func StateInvisibleSet(s *shared.GameState, key string, val any) {
+	if (val == nil) {
+		delete(s.Data, key)
+		return
+	}
+
 	s.Data[key] = val
+}
+
+func StateSet(s *shared.GameState, key string, val any) {
+	s.Data["display_order"] = append(shared.GetStringList(s, "display_order"), key)
+	StateInvisibleSet(s, key, val)
 }
 
 func PropedSet(s *shared.GameState, key string, val int) {
@@ -173,42 +182,32 @@ func ClearEventLogs(s *shared.GameState) {
 }
 
 //go:wasmexport InitState
-func InitState() uint64 {
+func InitState() *shared.GameState {
 	state := &shared.GameState{
 		Data: map[string]any{
-			"key_order": []string{
+			"display_order": []string{
 				"status",
-				"event_logs",
-				"invisible_keys",
+				// "event_logs",
 				"round",
 				"player_order",
 				"acting_player",
 				"date_time",
 			},
-			"status":         "RUNNING",
-			"event_logs":     []string{},
-			"invisible_keys": []string{"invisible_keys", "event_logs"},
-			"round":          1,
-			"player_order":   slices.Concat(humanKeys(), robotKeys()),
-			"acting_player":  "anar",
-			"date_time":      time.Now().Format("2006-01-02 00:00:00"),
+			"status":        "RUNNING",
+			"event_logs":    []string{},
+			"round":         1,
+			"player_order":  slices.Concat(humanKeys(), robotKeys()),
+			"acting_player": "anar",
+			"date_time":     time.Now().Format("2006-01-02 00:00:00"),
 		},
 	}
 	for _, human_key := range humanKeys() {
 		StateSet(state, human_key+".location", "forest")
 		StateSet(state, human_key+".max_energy", 100)
 		StateSet(state, human_key+".energy", 100)
-		StateSet(state, "invisible_keys", append(shared.GetStringList(state, "invisible_keys"), human_key+".sleeping"))
 	}
 
-	buf, err := json.Marshal(state)
-	if err != nil {
-		return 0
-	}
-
-	ptr := uint32(uintptr(slicePtr(buf)))
-	size := uint32(len(buf))
-	return (uint64(ptr) << 32) | uint64(size)
+	return state
 }
 
 func slicePtr(b []byte) unsafe.Pointer {
@@ -471,14 +470,14 @@ func InitDeck() map[string]*shared.Card {
 			Action: func(state *shared.GameState) {
 				ClearEventLogs(state)
 
-				StateSet(state, PlayerDotKey(state, "sleeping"), true)
+				StateInvisibleSet(state, PlayerDotKey(state, "sleeping"), true)
 				hasFire := shared.GetInt(state, LocalDotKey(state, "fire_minutes")) > 0
 
 				if TimePasses(state, 8*60) {
 					return
 				}
 
-				delete(state.Data, PlayerDotKey(state, "sleeping"))
+				StateSet(state, PlayerDotKey(state, "sleeping"), nil)
 
 				message := "The player slept in the cold."
 				if hasFire {
@@ -513,6 +512,18 @@ func InitDeck() map[string]*shared.Card {
 			},
 		},
 	}
+}
+
+//go:wasmexport InitMarshaledState
+func InitMarshaledState() uint64 {
+	buf, err := json.Marshal(InitState())
+	if err != nil {
+		return 0
+	}
+
+	ptr := uint32(uintptr(slicePtr(buf)))
+	size := uint32(len(buf))
+	return (uint64(ptr) << 32) | uint64(size)
 }
 
 //go:wasmexport InitRobotsNames
