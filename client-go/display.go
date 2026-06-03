@@ -35,8 +35,24 @@ func CenterText(text string, width int) string {
 	return strings.Repeat(" ", paddingLeft) + text + strings.Repeat(" ", paddingRight)
 }
 
+
+func GetStringList(state map[string]any, key string) []string {
+	if val, ok := state[key].([]any); ok {
+		list := make([]string, len(val))
+		for i, v := range val {
+			list[i] = fmt.Sprintf("%v", v)
+		}
+		return list
+	} else {
+		if val, ok := state[key].([]string); ok {
+			return val
+		}
+		return []string{}
+	}
+}
+
 func PrintState(state map[string]any) {
-	display_order := state["display_order"].([]string)
+	display_order := GetStringList(state, "display_order")
 	// Clear screen and home cursor
 	fmt.Print("\033[H\033[J")
 

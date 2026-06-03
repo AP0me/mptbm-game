@@ -32,6 +32,8 @@ func isHuman(p string) bool {
 }
 
 func StateInvisibleSet(s *shared.GameState, key string, val any) {
+	if key == "" { return }
+
 	if val == nil {
 		delete(s.Data, key)
 		return
@@ -41,7 +43,10 @@ func StateInvisibleSet(s *shared.GameState, key string, val any) {
 }
 
 func StateSet(s *shared.GameState, key string, val any) {
-	s.Data["display_order"] = append(shared.GetStringList(s, "display_order"), key)
+	display_order := shared.GetString(s, "display_order")
+	if display_order == "" {
+		s.Data["display_order"] = append(shared.GetStringList(s, "display_order"), key)
+	}
 	StateInvisibleSet(s, key, val)
 }
 
@@ -59,12 +64,13 @@ func PlayerDotKey(s *shared.GameState, key string) string {
 
 func LocalDotKey(s *shared.GameState, key string) string {
 	loc := shared.GetString(s, PlayerDotKey(s, "location"))
+	if loc == "" { return "" }
 	return loc + "." + key
 }
 
 func LogEvent(s *shared.GameState, msg string) {
 	logs := shared.GetStringList(s, "event_logs")
-	StateSet(s, "event_logs", append(logs, msg))
+	StateInvisibleSet(s, "event_logs", append(logs, msg))
 }
 
 func EndTurn(s *shared.GameState) {
@@ -178,10 +184,9 @@ func TimePasses(s *shared.GameState, minutes int) bool {
 }
 
 func ClearEventLogs(s *shared.GameState) {
-	StateSet(s, "event_logs", []string{})
+	StateInvisibleSet(s, "event_logs", []string{})
 }
 
-//go:wasmexport InitState
 func InitState() *shared.GameState {
 	state := &shared.GameState{
 		Data: map[string]any{
@@ -230,6 +235,15 @@ func InitDeck() map[string]*shared.Card {
 				ClearEventLogs(state)
 				EndTurn(state)
 				LogEvent(state, "Let's see what else is happening.")
+			},
+		},
+		"skip1": {
+			Name:       "Skip1",
+			Conditions: func(state *shared.GameState) bool { return true },
+			Action: func(state *shared.GameState) {
+				ClearEventLogs(state)
+				EndTurn(state)
+				LogEvent(state, "Let's see 1111what else 111is happening11111.")
 			},
 		},
 		"eat": {
@@ -514,16 +528,16 @@ func InitMarshaledState() uint64 {
 		return 0
 	}
 
-	// func slicePtr() unsafe.Pointer {
-	var b []byte = buf
-	slicedBufPtr := unsafe.Pointer(&b[0])
-	if len(b) == 0 {
-		slicedBufPtr = nil
-	}
-
-	ptr := uint32(uintptr(slicedBufPtr))
+	ptr := uint32(uintptr(slicePtr(buf)))
 	size := uint32(len(buf))
 	return (uint64(ptr) << 32) | uint64(size)
+}
+
+func slicePtr(b []byte) unsafe.Pointer {
+	if len(b) == 0 {
+		return nil
+	}
+	return unsafe.Pointer(&b[0])
 }
 
 //go:wasmexport InitRobotsNames
