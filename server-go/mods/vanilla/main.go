@@ -43,9 +43,11 @@ func StateInvisibleSet(s *shared.GameState, key string, val any) {
 }
 
 func StateSet(s *shared.GameState, key string, val any) {
-	display_order := shared.GetStringList(s, "display_order")
-	if !slices.Contains(display_order, key) {
-		s.Data["display_order"] = append(display_order, key)
+	if (val != nil) {
+		display_order := shared.GetStringList(s, "display_order")
+		if !slices.Contains(display_order, key) {
+			s.Data["display_order"] = append(display_order, key)
+		}
 	}
 	StateInvisibleSet(s, key, val)
 }
