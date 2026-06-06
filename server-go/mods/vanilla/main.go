@@ -245,10 +245,6 @@ func InitDeck() map[string]*shared.Card {
 			Action: func(state *shared.GameState) {
 				ClearEventLogs(state)
 
-				if TimePasses(state, 30) {
-					return
-				}
-
 				cooked := 20
 				if shared.GetInt(state, LocalDotKey(state, "fire_minutes")) > 0 {
 					cooked = 50
@@ -259,6 +255,10 @@ func InitDeck() map[string]*shared.Card {
 				}
 
 				PropedSet(state, LocalDotKey(state, "food"), shared.GetInt(state, LocalDotKey(state, "food"))-15)
+
+				if TimePasses(state, 30) {
+					return
+				}
 
 				message := "The player ate raw food."
 				if cooked > 20 {
