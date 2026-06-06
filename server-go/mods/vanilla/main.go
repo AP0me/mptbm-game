@@ -256,15 +256,13 @@ func InitDeck() map[string]*shared.Card {
 
 				PropedSet(state, LocalDotKey(state, "food"), shared.GetInt(state, LocalDotKey(state, "food"))-15)
 
-				if TimePasses(state, 30) {
-					return
-				}
-
 				message := "The player ate raw food."
 				if cooked > 20 {
 					message = "The player ate a cooked meal."
 				}
 				LogEvent(state, message)
+
+				TimePasses(state, 30)
 			},
 		},
 		"hunt": {
@@ -284,15 +282,14 @@ func InitDeck() map[string]*shared.Card {
 				if AddEnergy(state, -10, "Died hunting") {
 					return
 				}
-				if TimePasses(state, 60) {
-					return
-				}
 
 				message := "Hunting at night was difficult."
 				if isDay {
 					message = "The daytime hunt was highly productive."
 				}
 				LogEvent(state, message)
+
+				TimePasses(state, 60)
 			},
 		},
 		"wood": {
@@ -314,15 +311,13 @@ func InitDeck() map[string]*shared.Card {
 
 				PropedSet(state, LocalDotKey(state, "wood"), shared.GetInt(state, LocalDotKey(state, "wood"))+yield)
 
-				if TimePasses(state, 60) {
-					return
-				}
-
 				message := "The player foraged for wood. Lack of visibility made foraging challenging."
 				if hasLight {
 					message = "The player foraged for wood."
 				}
 				LogEvent(state, message)
+
+				TimePasses(state, 60)
 			},
 		},
 		"shelter": {
@@ -336,14 +331,13 @@ func InitDeck() map[string]*shared.Card {
 				if AddEnergy(state, -45, "Died building shelter") {
 					return
 				}
-				if TimePasses(state, 60) {
-					return
-				}
 
 				StateSet(state, "shelter", true)
 				PropedSet(state, LocalDotKey(state, "wood"), shared.GetInt(state, LocalDotKey(state, "wood"))-50)
 
 				LogEvent(state, "The player built a shelter.")
+
+				TimePasses(state, 60)
 			},
 		},
 		"boat": {
@@ -357,14 +351,13 @@ func InitDeck() map[string]*shared.Card {
 				if AddEnergy(state, -45, "Died building boat") {
 					return
 				}
-				if TimePasses(state, 60) {
-					return
-				}
 
 				StateSet(state, "boat", true)
 				PropedSet(state, LocalDotKey(state, "wood"), shared.GetInt(state, LocalDotKey(state, "wood"))-250)
 
 				LogEvent(state, "The player built a boat.")
+
+				TimePasses(state, 60)
 			},
 		},
 		"fish": {
@@ -382,10 +375,6 @@ func InitDeck() map[string]*shared.Card {
 
 				PropedSet(state, LocalDotKey(state, "food"), shared.GetInt(state, LocalDotKey(state, "food"))+yield)
 
-				if TimePasses(state, 60) {
-					return
-				}
-
 				if SunLightLevel(state) > 6 && !shared.GetBool(state, "bottle_map") {
 					StateSet(state, "bottle_map", true)
 					LogEvent(state, "The player fishes out a map in a bottle!")
@@ -397,6 +386,8 @@ func InitDeck() map[string]*shared.Card {
 					message = "The player caught a big fish."
 				}
 				LogEvent(state, message)
+
+				TimePasses(state, 60)
 			},
 		},
 		"fire": {
@@ -406,22 +397,18 @@ func InitDeck() map[string]*shared.Card {
 			},
 			Action: func(state *shared.GameState) {
 				ClearEventLogs(state)
-				fromScratch := false
-
-				if shared.GetInt(state, LocalDotKey(state, "fire_minutes")) <= 0 {
-					fromScratch = true
-					if AddEnergy(state, -45, "Died making fire from scratch") {
-						return
-					}
-					if TimePasses(state, 60) {
-						return
-					}
-				}
+				fromScratch := shared.GetInt(state, LocalDotKey(state, "fire_minutes")) <= 0
 
 				currentWood := shared.GetInt(state, LocalDotKey(state, "wood"))
 				woodToBurn := currentWood
 				if woodToBurn > 10 {
 					woodToBurn = 10
+				}
+
+				if fromScratch {
+					if AddEnergy(state, -45, "Died making fire from scratch") {
+						return
+					}
 				}
 
 				burnMinutes := woodToBurn * 90
@@ -433,6 +420,12 @@ func InitDeck() map[string]*shared.Card {
 					message = "The player rubs sticks together to make fire. It was exhausting and time consuming."
 				}
 				LogEvent(state, message)
+
+				if fromScratch {
+					if TimePasses(state, 60) {
+						return
+					}
+				}
 			},
 		},
 		"follow_the_map": {
@@ -471,10 +464,6 @@ func InitDeck() map[string]*shared.Card {
 				StateInvisibleSet(state, PlayerDotKey(state, "sleeping"), true)
 				hasFire := shared.GetInt(state, LocalDotKey(state, "fire_minutes")) > 0
 
-				if TimePasses(state, 8*60) {
-					return
-				}
-
 				StateSet(state, PlayerDotKey(state, "sleeping"), nil)
 
 				message := "The player slept in the cold."
@@ -482,6 +471,10 @@ func InitDeck() map[string]*shared.Card {
 					message = "The player slept in warmth."
 				}
 				LogEvent(state, message)
+
+				if TimePasses(state, 8*60) {
+					return
+				}
 			},
 		},
 		"wait": {
@@ -491,10 +484,11 @@ func InitDeck() map[string]*shared.Card {
 			},
 			Action: func(state *shared.GameState) {
 				ClearEventLogs(state)
+				LogEvent(state, "shared.Player does nothing for 1 hour.")
+
 				if TimePasses(state, 60) {
 					return
 				}
-				LogEvent(state, "shared.Player does nothing for 1 hour.")
 			},
 		},
 		"end_of_round": {
