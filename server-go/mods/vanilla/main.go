@@ -162,7 +162,7 @@ func InitDeck() map[string]*shared.Card {
 		"eat": {
 			Name: "Eat 10 food",
 			Conditions: func(state *shared.GameState) bool {
-				return shared.IsHuman(shared.GetActingPlayer(state), humanKeys()) && shared.GetInt(state, LocalDotKey(state, "food")) > 0
+				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetInt(state, LocalDotKey(state, "food")) > 0
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
@@ -190,7 +190,7 @@ func InitDeck() map[string]*shared.Card {
 		"hunt": {
 			Name: "Hunt game",
 			Conditions: func(state *shared.GameState) bool {
-				return shared.IsHuman(shared.GetActingPlayer(state), humanKeys())
+				return slices.Contains(humanKeys(), shared.GetActingPlayer(state))
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
@@ -217,7 +217,7 @@ func InitDeck() map[string]*shared.Card {
 		"wood": {
 			Name: "Collect wood",
 			Conditions: func(state *shared.GameState) bool {
-				return shared.IsHuman(shared.GetActingPlayer(state), humanKeys()) && shared.GetInt(state, PlayerDotKey(state, "energy")) > 5
+				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetInt(state, PlayerDotKey(state, "energy")) > 5
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
@@ -245,7 +245,7 @@ func InitDeck() map[string]*shared.Card {
 		"shelter": {
 			Name: "Build a shelter (50 wood)",
 			Conditions: func(state *shared.GameState) bool {
-				return shared.IsHuman(shared.GetActingPlayer(state), humanKeys()) && shared.GetInt(state, LocalDotKey(state, "wood")) >= 50
+				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetInt(state, LocalDotKey(state, "wood")) >= 50
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
@@ -265,7 +265,7 @@ func InitDeck() map[string]*shared.Card {
 		"boat": {
 			Name: "Build a boat (250 wood)",
 			Conditions: func(state *shared.GameState) bool {
-				return shared.IsHuman(shared.GetActingPlayer(state), humanKeys()) && shared.GetInt(state, LocalDotKey(state, "wood")) >= 250
+				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetInt(state, LocalDotKey(state, "wood")) >= 250
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
@@ -285,7 +285,7 @@ func InitDeck() map[string]*shared.Card {
 		"fish": {
 			Name: "Go fishing",
 			Conditions: func(state *shared.GameState) bool {
-				return shared.IsHuman(shared.GetActingPlayer(state), humanKeys()) && shared.GetBool(state, LocalDotKey(state, "boat"))
+				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetBool(state, LocalDotKey(state, "boat"))
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
@@ -315,7 +315,7 @@ func InitDeck() map[string]*shared.Card {
 		"fire": {
 			Name: "Make fire (up to 10 wood)",
 			Conditions: func(state *shared.GameState) bool {
-				return shared.IsHuman(shared.GetActingPlayer(state), humanKeys()) && shared.GetInt(state, LocalDotKey(state, "wood")) > 0
+				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetInt(state, LocalDotKey(state, "wood")) > 0
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
@@ -353,7 +353,7 @@ func InitDeck() map[string]*shared.Card {
 		"follow_the_map": {
 			Name: "Follow the map the player fished out.",
 			Conditions: func(state *shared.GameState) bool {
-				return shared.IsHuman(shared.GetActingPlayer(state), humanKeys()) && shared.GetBool(state, "bottle_map")
+				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetBool(state, "bottle_map")
 			},
 			Action: func(state *shared.GameState) {
 
@@ -378,7 +378,7 @@ func InitDeck() map[string]*shared.Card {
 		"sleep": {
 			Name: "Sleep 8 hours",
 			Conditions: func(state *shared.GameState) bool {
-				return shared.IsHuman(shared.GetActingPlayer(state), humanKeys()) && SunLightLevel(state) <= 0
+				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && SunLightLevel(state) <= 0
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
@@ -402,7 +402,7 @@ func InitDeck() map[string]*shared.Card {
 		"wait": {
 			Name: "Wait 1 hour",
 			Conditions: func(state *shared.GameState) bool {
-				return shared.IsHuman(shared.GetActingPlayer(state), humanKeys())
+				return slices.Contains(humanKeys(), shared.GetActingPlayer(state))
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)

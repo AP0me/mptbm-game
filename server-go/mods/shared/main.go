@@ -171,10 +171,6 @@ func RobotInput(val string) string {
 	return val
 }
 
-func IsHuman(p string, human_keys []string) bool {
-	return slices.Contains(human_keys, p)
-}
-
 func PropedSet(s *GameState, key string, val int) {
 	if val < 0 {
 		val = 0
