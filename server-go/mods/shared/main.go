@@ -103,7 +103,9 @@ func GetActingPlayer(s *GameState) string {
 }
 
 func StateInvisibleSet(s *GameState, key string, val any) {
-	if key == "" { return }
+	if key == "" {
+		return
+	}
 
 	if val == nil {
 		delete(s.Data, key)
@@ -114,7 +116,7 @@ func StateInvisibleSet(s *GameState, key string, val any) {
 }
 
 func StateSet(s *GameState, key string, val any) {
-	if (val != nil) {
+	if val != nil {
 		display_order := GetStringList(s, "display_order")
 		if !slices.Contains(display_order, key) {
 			s.Data["display_order"] = append(display_order, key)
@@ -177,5 +179,3 @@ func PropedSet(s *GameState, key string, val int) {
 	}
 	StateSet(s, key, val)
 }
-
-

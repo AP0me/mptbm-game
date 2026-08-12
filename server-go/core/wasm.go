@@ -150,26 +150,26 @@ func CallPlayableCards(ctx context.Context, instance api.Module, hostState any) 
 }
 
 func CallChooseCard(ctx context.Context, instance api.Module, playerName string, hostState any) (string, error) {
-    allocator := instance.ExportedFunction("Allocate")
-    chooseCardFn := instance.ExportedFunction("ChooseCard")
+	allocator := instance.ExportedFunction("Allocate")
+	chooseCardFn := instance.ExportedFunction("ChooseCard")
 
-    // 1. Write the player NAME string and state into the memory heap
-    pPtr, pSize, _ := writeToWasm(ctx, instance, allocator, playerName)
-    sPtr, sSize, _ := writeToWasm(ctx, instance, allocator, hostState)
+	// 1. Write the player NAME string and state into the memory heap
+	pPtr, pSize, _ := writeToWasm(ctx, instance, allocator, playerName)
+	sPtr, sSize, _ := writeToWasm(ctx, instance, allocator, hostState)
 
-    // 2. Invoke the choice calculation function
-    res, err := chooseCardFn.Call(ctx, uint64(pPtr), uint64(pSize), uint64(sPtr), uint64(sSize))
-    if err != nil {
-        return "", err
-    }
+	// 2. Invoke the choice calculation function
+	res, err := chooseCardFn.Call(ctx, uint64(pPtr), uint64(pSize), uint64(sPtr), uint64(sSize))
+	if err != nil {
+		return "", err
+	}
 
-    // 3. Read back the single chosen card key
-    outPtr := uint32(res[0] >> 32)
-    outSize := uint32(res[0])
-    outBytes, _ := instance.Memory().Read(outPtr, outSize)
+	// 3. Read back the single chosen card key
+	outPtr := uint32(res[0] >> 32)
+	outSize := uint32(res[0])
+	outBytes, _ := instance.Memory().Read(outPtr, outSize)
 
-    // Convert raw bytes directly to string—no JSON parsing required!
-    return string(outBytes), nil
+	// Convert raw bytes directly to string—no JSON parsing required!
+	return string(outBytes), nil
 }
 
 func CallPlayCardAction(ctx context.Context, instance api.Module, cardKey string, hostState any) (shared.GameState, error) {
@@ -207,3 +207,4 @@ func CallPlayCardAction(ctx context.Context, instance api.Module, cardKey string
 
 	return updatedState, nil
 }
+

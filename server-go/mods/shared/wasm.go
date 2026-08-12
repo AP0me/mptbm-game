@@ -5,7 +5,6 @@ import (
 	"unsafe"
 )
 
-
 func InitRobotsNames(robots map[string]*Player) uint64 {
 	names := map[string]HostPlayer{}
 	for name, player := range robots {
@@ -171,3 +170,4 @@ func PlayCardAction(deck map[string]*Card, keyPtr uint32, keySize uint32, stateP
 	size := uint32(len(lastPlayCardOutput))
 	return (uint64(ptr) << 32) | uint64(size)
 }
+

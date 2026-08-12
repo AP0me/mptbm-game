@@ -21,7 +21,9 @@ func PlayerDotKey(s *shared.GameState, key string) string {
 
 func LocalDotKey(s *shared.GameState, key string) string {
 	loc := shared.GetString(s, PlayerDotKey(s, "location"))
-	if loc == "" { return "" }
+	if loc == "" {
+		return ""
+	}
 	return loc + "." + key
 }
 
@@ -356,7 +358,6 @@ func InitDeck() map[string]*shared.Card {
 				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetBool(state, "bottle_map")
 			},
 			Action: func(state *shared.GameState) {
-
 				food := shared.GetInt(state, LocalDotKey(state, "food"))
 				wood := shared.GetInt(state, LocalDotKey(state, "wood"))
 				fire := shared.GetInt(state, LocalDotKey(state, "fire_minutes"))

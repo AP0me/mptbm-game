@@ -35,7 +35,6 @@ func CenterText(text string, width int) string {
 	return strings.Repeat(" ", paddingLeft) + text + strings.Repeat(" ", paddingRight)
 }
 
-
 func GetStringList(state map[string]any, key string) []string {
 	if val, ok := state[key].([]any); ok {
 		list := make([]string, len(val))

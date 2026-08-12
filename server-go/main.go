@@ -37,14 +37,14 @@ func main() {
 		if player.Conn != nil {
 			core.SendCards(playable_cards, player.Conn)
 		}
-		
+
 		card_key := "skip"
 		if _, ok := robots[acting_name]; ok {
 			card_key, err = core.CallChooseCard(ctx, instance, acting_name, state)
 		} else {
 			card_key = core.HumanInput(player.Conn)
 		}
-		
+
 		newState, err := core.CallPlayCardAction(ctx, instance, card_key, state)
 		if err != nil {
 			fmt.Printf("Error playing card action: %v\n", err)
