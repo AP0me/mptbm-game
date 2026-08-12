@@ -18,7 +18,6 @@ func SafeSend(conn net.Conn, data any, pType string) bool {
 	if err != nil {
 		return false
 	}
-
 	_, err = conn.Write(append(encoded, '\n'))
 	if err != nil {
 		fmt.Printf("[Server] Write error: %v\n", err)
@@ -33,8 +32,9 @@ func PacketMultiSend(conns []net.Conn, data any, pType string) {
 	}
 }
 
+// SendState sends the full tree-based GameState to all clients.
 func SendState(state shared.GameState, conns []net.Conn) {
-	PacketMultiSend(conns, state.Data, "STATE")
+	PacketMultiSend(conns, state, "STATE")
 }
 
 func SendCards(playableCards map[string]shared.CardProfile, conn net.Conn) {
@@ -46,5 +46,8 @@ func SendCards(playableCards map[string]shared.CardProfile, conn net.Conn) {
 }
 
 func SendMessages(logs []string, conns []net.Conn) {
+	if logs == nil {
+		logs = []string{}
+	}
 	PacketMultiSend(conns, logs, "MESSAGE")
 }

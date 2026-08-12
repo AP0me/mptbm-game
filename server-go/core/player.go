@@ -3,7 +3,6 @@ package core
 import (
 	"bufio"
 	"fmt"
-	"game/server/mods/shared"
 	"net"
 	"strings"
 )
@@ -15,47 +14,15 @@ func HumanInput(conn net.Conn) string {
 	return strings.TrimSpace(input)
 }
 
-func WelcomeHumansToPlayerList(playerOrder []string, ln net.Listener, players map[string]*shared.Player, robots map[string]shared.HostPlayer) {
-	for {
-		remaining := []string{}
-		for _, name := range playerOrder {
-			_, isRobot := robots[name]
-			_, exists := players[name]
-			if !isRobot && !exists {
-				remaining = append(remaining, name)
-			}
-		}
-
-		if len(remaining) == 0 {
-			break
-		}
-
-		conn, err := ln.Accept()
-		if err != nil {
-			continue
-		}
-
-		name := remaining[0]
-		players[name] = &shared.Player{
-			Name:   name,
-			Conn:   conn,
-			Decide: nil,
-		}
-
-		for robot_key, robot := range robots {
-			players[robot_key] = &shared.Player{Name: robot.Name, Conn: nil, Decide: nil}
-		}
-
-		fmt.Printf("[Server] Player %s connected.\n", name)
+// AcceptHumanConnection blocks until one human client connects, then returns
+// the connection.  The story mod is single-player, so we only need one.
+func AcceptHumanConnection(ln net.Listener) net.Conn {
+	fmt.Println("Waiting for a player to connect...")
+	conn, err := ln.Accept()
+	if err != nil {
+		fmt.Printf("[Server] Accept error: %v\n", err)
+		return AcceptHumanConnection(ln)
 	}
-}
-
-func PlayerConnections(players map[string]*shared.Player) []net.Conn {
-	conns := []net.Conn{}
-	for _, p := range players {
-		if p.Conn != nil {
-			conns = append(conns, p.Conn)
-		}
-	}
-	return conns
+	fmt.Printf("[Server] Player connected from %s\n", conn.RemoteAddr())
+	return conn
 }

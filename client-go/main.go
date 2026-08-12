@@ -42,9 +42,7 @@ func ConnectToServer() net.Conn {
 	}
 
 	fmt.Printf("%sConnected successfully!%s\n", Green, Reset)
-	fmt.Printf("%sWelcome to the Game!%s\n", Yellow, Reset)
-	fmt.Println("Waiting for the other players...")
-
+	fmt.Printf("%sWelcome to the Story Game!%s\n", Yellow, Reset)
 	return conn
 }
 
@@ -53,7 +51,6 @@ func main() {
 	defer conn.Close()
 
 	scanner := bufio.NewScanner(conn)
-	// Use a large buffer for game states
 	buf := make([]byte, 0, 64*1024)
 	scanner.Buffer(buf, 1024*1024)
 
@@ -62,22 +59,22 @@ func main() {
 	for scanner.Scan() {
 		line := scanner.Text()
 		var packet Packet
-		err := json.Unmarshal([]byte(line), &packet)
-		if err != nil {
+		if err := json.Unmarshal([]byte(line), &packet); err != nil {
 			continue
 		}
 
 		switch packet.Type {
 		case "STATE":
 			if data, ok := packet.Data.(map[string]any); ok {
-				PrintState(data)
+				PrintTree(data) // ← was PrintState
 			}
 		case "CARDS":
 			if data, ok := packet.Data.(map[string]any); ok {
 				PrintCards(data)
 			}
 		case "CHOICE":
-			fmt.Printf("%s%s➤ Enter card key (e.g. skip, hunt): %s", Yellow, Bold, Reset)
+			fmt.Printf("%s%s➤ Enter option key (e.g. begin, recruit, confront): %s",
+				Yellow, Bold, Reset)
 			choice, _ := stdinReader.ReadString('\n')
 			conn.Write([]byte(choice))
 		case "MESSAGE":
@@ -88,7 +85,6 @@ func main() {
 	}
 
 	if err := scanner.Err(); err != nil {
-		PrintError("Connection lost to server: " + err.Error())
-		main() // Reconnect
+		PrintError("Connection lost: " + err.Error())
 	}
 }

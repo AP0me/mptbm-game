@@ -26,112 +26,123 @@ func LoadWasmInstance(ctx context.Context, path string) (wazero.Runtime, api.Mod
 		r.Close(ctx)
 		return nil, nil, err
 	}
-
 	return r, mod, nil
 }
+
+// ---------------------------------------------------------------------------
+// Init state
+// ---------------------------------------------------------------------------
 
 func WasmInitState(instance api.Module, ctx context.Context) shared.GameState {
 	var state shared.GameState
 
-	InitMarshaledState := instance.ExportedFunction("InitMarshaledState")
-	if InitMarshaledState == nil {
+	fn := instance.ExportedFunction("InitMarshaledState")
+	if fn == nil {
 		fmt.Println("Exported function 'InitMarshaledState' not found")
 		return state
 	}
 
-	results, err := InitMarshaledState.Call(ctx)
+	results, err := fn.Call(ctx)
 	if err != nil {
 		fmt.Printf("Error calling InitMarshaledState: %v\n", err)
 		return state
 	}
 
-	if len(results) > 0 {
-		packedResult := results[0]
-		ptr := uint32(packedResult >> 32)
-		size := uint32(packedResult)
-		bytes, ok := instance.Memory().Read(ptr, size)
-		if !ok {
-			fmt.Printf("Failed to read WASM memory at pointer %d with size %d\n", ptr, size)
-			return state
-		}
-		if err := json.Unmarshal(bytes, &state); err != nil {
-			fmt.Printf("Failed to parse JSON string: %v\n", err)
-			return state
-		}
-	} else {
-		fmt.Println("Function executed successfully (no return values)")
+	if len(results) == 0 {
+		return state
 	}
 
+	packed := results[0]
+	ptr := uint32(packed >> 32)
+	size := uint32(packed)
+	bytes, ok := instance.Memory().Read(ptr, size)
+	if !ok {
+		fmt.Printf("Failed to read WASM memory at ptr=%d size=%d\n", ptr, size)
+		return state
+	}
+	if err := json.Unmarshal(bytes, &state); err != nil {
+		fmt.Printf("Failed to unmarshal state: %v\n", err)
+		return state
+	}
 	return state
 }
+
+// ---------------------------------------------------------------------------
+// Init robot names (empty for story mod, kept for compatibility)
+// ---------------------------------------------------------------------------
 
 func WasmInitRobotsNames(instance api.Module, ctx context.Context) map[string]shared.HostPlayer {
 	var robotMap map[string]shared.HostPlayer
 
-	InitRobotsNames := instance.ExportedFunction("InitRobotsNames")
-	if InitRobotsNames == nil {
-		fmt.Println("Exported function 'InitRobotsNames' not found")
+	fn := instance.ExportedFunction("InitRobotsNames")
+	if fn == nil {
 		return robotMap
 	}
 
-	res, err := InitRobotsNames.Call(ctx)
+	res, err := fn.Call(ctx)
 	if err != nil {
 		fmt.Printf("Error calling InitRobotsNames: %v\n", err)
 		return robotMap
 	}
-
-	if len(res) > 0 {
-		// 1. Unpack the pointer and size
-		packedResult := res[0]
-		ptr := uint32(packedResult >> 32)
-		size := uint32(packedResult)
-
-		// 2. Read the raw bytes from WASM sandbox memory
-		bytes, ok := instance.Memory().Read(ptr, size)
-		if !ok {
-			fmt.Println("Failed to read WASM memory boundary")
-			return robotMap
-		}
-
-		// 3. Parse the JSON back into a Go map
-		if err := json.Unmarshal(bytes, &robotMap); err != nil {
-			fmt.Printf("Failed to unmarshal robot names: %v\n", err)
-			return robotMap
-		}
+	if len(res) == 0 {
+		return robotMap
 	}
 
+	packed := res[0]
+	ptr := uint32(packed >> 32)
+	size := uint32(packed)
+	bytes, ok := instance.Memory().Read(ptr, size)
+	if !ok {
+		return robotMap
+	}
+	if err := json.Unmarshal(bytes, &robotMap); err != nil {
+		fmt.Printf("Failed to unmarshal robot names: %v\n", err)
+	}
 	return robotMap
 }
 
-func writeToWasm(ctx context.Context, instance api.Module, allocator api.Function, data any) (uint32, uint32, error) {
+// ---------------------------------------------------------------------------
+// Helper: write a Go value into WASM memory via Allocate
+// ---------------------------------------------------------------------------
+
+func writeToWasm(ctx context.Context, instance api.Module, data any) (uint32, uint32, error) {
+	allocator := instance.ExportedFunction("Allocate")
+	if allocator == nil {
+		return 0, 0, fmt.Errorf("Allocate export not found")
+	}
+
 	bytes, err := json.Marshal(data)
 	if err != nil {
 		return 0, 0, err
 	}
 	size := uint32(len(bytes))
 
-	// Ask WASM to allocate memory for this payload
 	res, err := allocator.Call(ctx, uint64(size))
 	if err != nil {
 		return 0, 0, err
 	}
 	ptr := uint32(res[0])
 
-	// Write the JSON bytes into that allocated sandbox slot
 	instance.Memory().Write(ptr, bytes)
 	return ptr, size, nil
 }
 
-func CallPlayableCards(ctx context.Context, instance api.Module, hostState any) (map[string]shared.CardProfile, error) {
-	allocator := instance.ExportedFunction("Allocate")
-	playableCardsFn := instance.ExportedFunction("PlayableCards")
+// ---------------------------------------------------------------------------
+// PlayableCards — ask WASM which cards are playable for the current state
+// ---------------------------------------------------------------------------
 
-	ptr, size, err := writeToWasm(ctx, instance, allocator, hostState)
+func CallPlayableCards(ctx context.Context, instance api.Module, state shared.GameState) (map[string]shared.CardProfile, error) {
+	fn := instance.ExportedFunction("PlayableCards")
+	if fn == nil {
+		return nil, fmt.Errorf("PlayableCards export not found")
+	}
+
+	ptr, size, err := writeToWasm(ctx, instance, state)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := playableCardsFn.Call(ctx, uint64(ptr), uint64(size))
+	res, err := fn.Call(ctx, uint64(ptr), uint64(size))
 	if err != nil {
 		return nil, err
 	}
@@ -140,59 +151,37 @@ func CallPlayableCards(ctx context.Context, instance api.Module, hostState any) 
 	outSize := uint32(res[0])
 	outBytes, _ := instance.Memory().Read(outPtr, outSize)
 
-	// Unmarshal directly into the correct type
 	var playable map[string]shared.CardProfile
 	if err := json.Unmarshal(outBytes, &playable); err != nil {
 		return nil, err
 	}
-
 	return playable, nil
 }
 
-func CallChooseCard(ctx context.Context, instance api.Module, playerName string, hostState any) (string, error) {
-	allocator := instance.ExportedFunction("Allocate")
-	chooseCardFn := instance.ExportedFunction("ChooseCard")
+// ---------------------------------------------------------------------------
+// PlayCardAction — execute a card action, return the updated state
+// ---------------------------------------------------------------------------
 
-	// 1. Write the player NAME string and state into the memory heap
-	pPtr, pSize, _ := writeToWasm(ctx, instance, allocator, playerName)
-	sPtr, sSize, _ := writeToWasm(ctx, instance, allocator, hostState)
-
-	// 2. Invoke the choice calculation function
-	res, err := chooseCardFn.Call(ctx, uint64(pPtr), uint64(pSize), uint64(sPtr), uint64(sSize))
-	if err != nil {
-		return "", err
+func CallPlayCardAction(ctx context.Context, instance api.Module, cardKey string, state shared.GameState) (shared.GameState, error) {
+	fn := instance.ExportedFunction("PlayCardAction")
+	if fn == nil {
+		return shared.GameState{}, fmt.Errorf("PlayCardAction export not found")
 	}
 
-	// 3. Read back the single chosen card key
-	outPtr := uint32(res[0] >> 32)
-	outSize := uint32(res[0])
-	outBytes, _ := instance.Memory().Read(outPtr, outSize)
-
-	// Convert raw bytes directly to string—no JSON parsing required!
-	return string(outBytes), nil
-}
-
-func CallPlayCardAction(ctx context.Context, instance api.Module, cardKey string, hostState any) (shared.GameState, error) {
-	allocator := instance.ExportedFunction("Allocate")
-	playCardFn := instance.ExportedFunction("PlayCardAction")
-
-	// 1. Write the card key and current state to WASM memory
-	kPtr, kSize, err := writeToWasm(ctx, instance, allocator, cardKey)
+	kPtr, kSize, err := writeToWasm(ctx, instance, cardKey)
 	if err != nil {
 		return shared.GameState{}, err
 	}
-	sPtr, sSize, err := writeToWasm(ctx, instance, allocator, hostState)
+	sPtr, sSize, err := writeToWasm(ctx, instance, state)
 	if err != nil {
 		return shared.GameState{}, err
 	}
 
-	// 2. Call the action execution
-	res, err := playCardFn.Call(ctx, uint64(kPtr), uint64(kSize), uint64(sPtr), uint64(sSize))
+	res, err := fn.Call(ctx, uint64(kPtr), uint64(kSize), uint64(sPtr), uint64(sSize))
 	if err != nil {
 		return shared.GameState{}, err
 	}
 
-	// 3. Read back the updated GameState
 	outPtr := uint32(res[0] >> 32)
 	outSize := uint32(res[0])
 	outBytes, ok := instance.Memory().Read(outPtr, outSize)
@@ -200,11 +189,9 @@ func CallPlayCardAction(ctx context.Context, instance api.Module, cardKey string
 		return shared.GameState{}, fmt.Errorf("failed to read updated state memory")
 	}
 
-	var updatedState shared.GameState
-	if err := json.Unmarshal(outBytes, &updatedState); err != nil {
+	var updated shared.GameState
+	if err := json.Unmarshal(outBytes, &updated); err != nil {
 		return shared.GameState{}, err
 	}
-
-	return updatedState, nil
+	return updated, nil
 }
-

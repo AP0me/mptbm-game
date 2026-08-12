@@ -8,50 +8,75 @@ import (
 	"net"
 )
 
+func isGameOver(s *shared.GameState) bool {
+	return s.Tree.IsAdvanced("main_quest", "victory") ||
+		s.Tree.IsAdvanced("main_quest_detail", "player_defeated")
+}
+
 func main() {
 	ctx := context.Background()
-	runtime, instance, err := core.LoadWasmInstance(ctx, "mods/vanilla/vanilla.wasm")
+
+	// Load the story WASM module
+	runtime, instance, err := core.LoadWasmInstance(ctx, "mods/vanilla/story.wasm")
 	if err != nil {
-		fmt.Printf("Failed to load wasm instance: %v\n", err)
+		fmt.Printf("Failed to load wasm: %v\n", err)
 		return
 	}
 	defer runtime.Close(ctx)
 
-	ln, _ := net.Listen("tcp", ":8080")
-	fmt.Println("Server started on :8080")
-
+	// Initialize state
 	state := core.WasmInitState(instance, ctx)
-	robots := core.WasmInitRobotsNames(instance, ctx)
 
-	players := map[string]*shared.Player{}
-	core.WelcomeHumansToPlayerList(shared.GetStringList(&state, "player_order"), ln, players, robots)
-	conns := core.PlayerConnections(players)
+	// Start TCP server
+	ln, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		fmt.Printf("Failed to listen: %v\n", err)
+		return
+	}
+	fmt.Println("Story server started on :8080")
 
-	for state.Data["status"] == "RUNNING" {
-		acting_name := shared.GetActingPlayer(&state)
-		player := players[acting_name]
+	// Accept one human player
+	conn := core.AcceptHumanConnection(ln)
+	defer conn.Close()
+
+	conns := []net.Conn{conn}
+
+	// Main game loop
+	for !isGameOver(&state) {
+		// 1. Send current tree state
 		core.SendState(state, conns)
 
-		playable_cards, _ := core.CallPlayableCards(ctx, instance, state)
-
-		if player.Conn != nil {
-			core.SendCards(playable_cards, player.Conn)
+		// 2. Get playable options from WASM
+		playable, err := core.CallPlayableCards(ctx, instance, state)
+		if err != nil {
+			fmt.Printf("Error getting playable cards: %v\n", err)
+			continue
 		}
 
-		card_key := "skip"
-		if _, ok := robots[acting_name]; ok {
-			card_key, err = core.CallChooseCard(ctx, instance, acting_name, state)
-		} else {
-			card_key = core.HumanInput(player.Conn)
+		// 3. Send options to client
+		core.SendCards(playable, conn)
+
+		// 4. Get human's choice
+		cardKey := core.HumanInput(conn)
+		if cardKey == "" {
+			cardKey = "skip"
 		}
 
-		newState, err := core.CallPlayCardAction(ctx, instance, card_key, state)
+		// 5. Execute the chosen action in WASM
+		newState, err := core.CallPlayCardAction(ctx, instance, cardKey, state)
 		if err != nil {
 			fmt.Printf("Error playing card action: %v\n", err)
 			continue
 		}
 		state = newState
 
-		core.SendMessages(shared.GetStringList(&state, "event_logs"), conns)
+		// 6. Send event messages
+		core.SendMessages(state.EventLogs, conns)
 	}
+
+	// Final state + messages
+	core.SendState(state, conns)
+	core.SendMessages(state.EventLogs, conns)
+
+	fmt.Println("Game over!")
 }
