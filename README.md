@@ -1,7 +1,7 @@
 # Multi-Player Text-Based Moddable Game
 
-## What is this game?
-idk ... it is meant to be a story generator.
+## What is this?
+A terminal based, extensible, multi-player game system for narrative games.
 
 ## How to run?
 - Install [golang](https://go.dev/doc/install).
