@@ -5,21 +5,18 @@ idk ... it is meant to be a story generator.
 
 ## How to run?
 - Install [golang](https://go.dev/doc/install).
-- Open 3 terminal windows.
+- Open 2 terminal windows.
 - Navigate to project root.
 - Open server-go in terminal 1.
 - Open client-go in terminal 2.
-- Open client-go in terminal 3.
 - Run `bash run.sh` on terminal 1.
 - Run `go run .` on terminal 2.
-- Run `go run .` on terminal 3.
 - Play the game `:)`
 
 ## How to play?
-- Open the terminal 2 and terminal 3 side by side. They are meant to be played by different players.
 - Type in one of the displayed card options and press `Enter`.
 - Observe the message describing the changes to the game world.
-- You can do anything you want, but if you don't know what to do start by surviving a few days and gather wood.
+- make the right choices to defeat the villain!
 
 ## How to make mods?
 - Open a new folder under `server-go/mods` folder.
