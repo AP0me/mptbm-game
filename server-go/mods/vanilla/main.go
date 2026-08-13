@@ -2,150 +2,136 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"game/server/mods/shared"
-	"math"
-	"math/rand"
-	"slices"
-	"time"
 	"unsafe"
 )
 
 func humanKeys() []string {
-	return []string{"anar", "elshad"}
+	return []string{"anar"}
 }
 
-func PlayerDotKey(s *shared.GameState, key string) string {
-	p := shared.GetActingPlayer(s)
-	return p + "." + key
+// ---------------------------------------------------------------------------
+// DirectedTree helpers
+//
+// The whole Python DirectedTree lives in GameState.Data["tree"] as a flat map
+// with dot-notation keys:
+//
+//	"branches.<layer1>"   -> []string (children in order)
+//	"selections.<layer1>" -> int     (advanced index, -1 = none)
+//
+// After a JSON round-trip, []string becomes []any and int becomes float64,
+// so the getters below accept both shapes.
+// ---------------------------------------------------------------------------
+
+func treeData(state *shared.GameState) map[string]any {
+	if t, ok := state.Data["tree"].(map[string]any); ok {
+		return t
+	}
+	return nil
 }
 
-func LocalDotKey(s *shared.GameState, key string) string {
-	loc := shared.GetString(s, PlayerDotKey(s, "location"))
-	if loc == "" { return "" }
-	return loc + "." + key
-}
-
-func AddEnergy(s *shared.GameState, amount int, deathMsg string) bool {
-	key := PlayerDotKey(s, "energy")
-
-	current := shared.GetInt(s, key)
-	max := shared.GetInt(s, PlayerDotKey(s, "max_energy"))
-
-	newVal := current + amount
-	if newVal <= 0 {
-		shared.PropedSet(s, key, 0)
-		shared.LogEvent(s, deathMsg)
-		shared.RemovePlayers(s, []string{shared.GetActingPlayer(s)})
-		shared.EndTurn(s)
-		return true
+func getBranch(state *shared.GameState, layer1Key string) []string {
+	t := treeData(state)
+	if t == nil {
+		return nil
 	}
 
-	if newVal > max {
-		newVal = max
+	switch val := t["branches."+layer1Key].(type) {
+	case []string:
+		return val
+	case []any:
+		out := make([]string, len(val))
+		for i, v := range val {
+			out[i] = fmt.Sprintf("%v", v)
+		}
+		return out
 	}
-	shared.PropedSet(s, key, newVal)
-	return false
+	return nil
 }
 
-func SunLightLevel(s *shared.GameState) int {
-	t, _ := time.Parse("2006-01-02 15:04:05", shared.GetString(s, "date_time"))
-	hour := t.Hour()
-
-	// Simplified sun logic: Peak at 12:00, 0 at night
-	if hour >= 6 && hour <= 18 {
-		progress := float64(hour-6) / 12.0
-		level := math.Sin(progress * math.Pi)
-		return int(math.Round(level * 10))
-	}
-	return 0
-}
-
-func LightLevel(s *shared.GameState) int {
-	sunLightLevel := SunLightLevel(s)
-
-	fire_light_level := 0
-	if shared.GetInt(s, LocalDotKey(s, "fire_minutes")) > 0 {
-		fire_light_level = 4
+func getSelection(state *shared.GameState, layer1Key string) int {
+	t := treeData(state)
+	if t == nil {
+		return -1
 	}
 
-	return sunLightLevel + fire_light_level
+	switch val := t["selections."+layer1Key].(type) {
+	case int:
+		return val
+	case float64:
+		return int(val)
+	}
+	return -1
 }
 
-func TimePasses(s *shared.GameState, minutes int) bool {
-	t, _ := time.Parse("2006-01-02 15:04:05", shared.GetString(s, "date_time"))
-	newTime := t.Add(time.Duration(minutes) * time.Minute)
-	shared.StateSet(s, "date_time", newTime.Format("2006-01-02 15:04:05"))
+func setSelection(state *shared.GameState, layer1Key string, idx int) {
+	if t := treeData(state); t != nil {
+		t["selections."+layer1Key] = idx
+	}
+}
 
-	// 2. Decay fires across all human player locations
-	humans := humanKeys()
-	for _, pKey := range humans {
-		playerLoc := shared.GetString(s, pKey+".location")
-		if playerLoc != "" {
-			fireKey := playerLoc + ".fire_minutes"
-			currentFire := shared.GetInt(s, fireKey)
-			if currentFire > 0 {
-				newFire := currentFire - minutes
-				if newFire < 0 {
-					newFire = 0
-				}
-				shared.PropedSet(s, fireKey, newFire)
-			}
+func indexOfChild(children []string, childKey string) int {
+	for i, child := range children {
+		if child == childKey {
+			return i
 		}
 	}
-	baseEnergySpent := -10.0 * (float64(minutes) / 60.0)
-	if shared.GetBool(s, PlayerDotKey(s, "sleeping")) {
-		baseEnergySpent /= 5.0
-	}
-
-	if shared.GetBool(s, LocalDotKey(s, "shelter")) {
-		baseEnergySpent /= 2.0
-	}
-
-	if shared.GetInt(s, LocalDotKey(s, "fire_minutes")) > 0 {
-		baseEnergySpent /= 2.0
-	}
-
-	finalEnergySpent := int(math.Round(baseEnergySpent))
-	return AddEnergy(s, finalEnergySpent, "shared.Player died of hunger.")
+	return -1
 }
 
+// isAdvanced matches Python: current_idx >= target_idx
+func isAdvanced(state *shared.GameState, layer1Key, childKey string) bool {
+	currentIdx := getSelection(state, layer1Key)
+	targetIdx := indexOfChild(getBranch(state, layer1Key), childKey)
+	return currentIdx >= targetIdx
+}
+
+// advanceTo matches Python DirectedTree.advance_to: never moves backwards.
+func advanceTo(state *shared.GameState, layer1Key, childKey string) {
+	if !isAdvanced(state, layer1Key, childKey) {
+		setSelection(state, layer1Key, indexOfChild(getBranch(state, layer1Key), childKey))
+	}
+}
+
+// notDefeated mirrors PlayerNotDefeatedOption.check_condition.
+func notDefeated(state *shared.GameState) bool {
+	return !isAdvanced(state, "main_quest_detail", "player_defeated")
+}
+
+// ---------------------------------------------------------------------------
+// Game setup
+// ---------------------------------------------------------------------------
+
 func InitState() *shared.GameState {
-	state := &shared.GameState{
+	return &shared.GameState{
 		Data: map[string]any{
 			"display_order": []string{
 				"status",
-				// "event_logs",
-				"round",
-				"player_order",
 				"acting_player",
+				"player_order",
 				"date_time",
 			},
 			"status":        "RUNNING",
 			"event_logs":    []string{},
-			"round":         1,
-			"player_order":  slices.Concat(humanKeys(), shared.RobotKeys(InitRobots())),
 			"acting_player": "anar",
-			"date_time":     time.Now().Format("2006-01-02 00:00:00"),
-		},
-	}
-	for _, human_key := range humanKeys() {
-		shared.StateSet(state, human_key+".location", "forest")
-		shared.StateSet(state, human_key+".max_energy", 100)
-		shared.StateSet(state, human_key+".energy", 100)
-	}
-
-	return state
-}
-
-func InitRobots() map[string]*shared.Player {
-	return map[string]*shared.Player{
-		"round": {
-			Name: "round",
-			Decide: func(s *shared.GameState) string {
-				return shared.RobotInput("end_of_round")
+			"player_order":  humanKeys(),
+			"date_time":     "2026-08-13 12:00:00",
+			"tree": map[string]any{
+				"branches.main_quest":        []string{"inception", "gathering_allies", "confronting_villain", "victory"},
+				"branches.main_quest_detail": []string{"confronted_villain_without_artifact", "player_defeated"},
+				"branches.side_quest":        []string{"rumor_heard", "clue_found", "artifact_recovered"},
+				"selections.main_quest":        -1,
+				"selections.main_quest_detail": -1,
+				"selections.side_quest":        -1,
 			},
 		},
 	}
+}
+
+func InitRobots() map[string]*shared.Player {
+	// The Python story game has no robot players.
+	return map[string]*shared.Player{}
 }
 
 func InitDeck() map[string]*shared.Card {
@@ -156,277 +142,127 @@ func InitDeck() map[string]*shared.Card {
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
 				shared.EndTurn(state)
-				shared.LogEvent(state, "Let's see what else is happening.")
+				shared.LogEvent(state, "The hero pauses for a moment.")
 			},
 		},
-		"eat": {
-			Name: "Eat 10 food",
+		"begin_adventure": {
+			Name: "Begin the adventure",
 			Conditions: func(state *shared.GameState) bool {
-				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetInt(state, LocalDotKey(state, "food")) > 0
+				return notDefeated(state) && !isAdvanced(state, "main_quest", "inception")
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
-
-				cooked := 20
-				if shared.GetInt(state, LocalDotKey(state, "fire_minutes")) > 0 {
-					cooked = 50
-				}
-
-				if AddEnergy(state, cooked, "Died eating") {
-					return
-				}
-
-				shared.PropedSet(state, LocalDotKey(state, "food"), shared.GetInt(state, LocalDotKey(state, "food"))-15)
-
-				message := "The player ate raw food."
-				if cooked > 20 {
-					message = "The player ate a cooked meal."
-				}
-				shared.LogEvent(state, message)
-
-				TimePasses(state, 30)
-			},
-		},
-		"hunt": {
-			Name: "Hunt game",
-			Conditions: func(state *shared.GameState) bool {
-				return slices.Contains(humanKeys(), shared.GetActingPlayer(state))
-			},
-			Action: func(state *shared.GameState) {
-				shared.ClearEventLogs(state)
-				isDay := SunLightLevel(state) > 0
-				yield := 3
-				if isDay {
-					yield = 12
-				}
-				shared.PropedSet(state, LocalDotKey(state, "food"), shared.GetInt(state, LocalDotKey(state, "food"))+yield)
-
-				if AddEnergy(state, -10, "Died hunting") {
-					return
-				}
-
-				message := "Hunting at night was difficult."
-				if isDay {
-					message = "The daytime hunt was highly productive."
-				}
-				shared.LogEvent(state, message)
-
-				TimePasses(state, 60)
-			},
-		},
-		"wood": {
-			Name: "Collect wood",
-			Conditions: func(state *shared.GameState) bool {
-				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetInt(state, PlayerDotKey(state, "energy")) > 5
-			},
-			Action: func(state *shared.GameState) {
-				shared.ClearEventLogs(state)
-				if AddEnergy(state, -5, "Died collecting wood") {
-					return
-				}
-
-				hasLight := LightLevel(state) > 3
-				yield := 3
-				if hasLight {
-					yield = 5
-				}
-
-				shared.PropedSet(state, LocalDotKey(state, "wood"), shared.GetInt(state, LocalDotKey(state, "wood"))+yield)
-
-				message := "The player foraged for wood. Lack of visibility made foraging challenging."
-				if hasLight {
-					message = "The player foraged for wood."
-				}
-				shared.LogEvent(state, message)
-
-				TimePasses(state, 60)
-			},
-		},
-		"shelter": {
-			Name: "Build a shelter (50 wood)",
-			Conditions: func(state *shared.GameState) bool {
-				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetInt(state, LocalDotKey(state, "wood")) >= 50
-			},
-			Action: func(state *shared.GameState) {
-				shared.ClearEventLogs(state)
-
-				if AddEnergy(state, -45, "Died building shelter") {
-					return
-				}
-
-				shared.StateSet(state, "shelter", true)
-				shared.PropedSet(state, LocalDotKey(state, "wood"), shared.GetInt(state, LocalDotKey(state, "wood"))-50)
-
-				shared.LogEvent(state, "The player built a shelter.")
-
-				TimePasses(state, 60)
-			},
-		},
-		"boat": {
-			Name: "Build a boat (250 wood)",
-			Conditions: func(state *shared.GameState) bool {
-				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetInt(state, LocalDotKey(state, "wood")) >= 250
-			},
-			Action: func(state *shared.GameState) {
-				shared.ClearEventLogs(state)
-
-				if AddEnergy(state, -45, "Died building boat") {
-					return
-				}
-
-				shared.StateSet(state, "boat", true)
-				shared.PropedSet(state, LocalDotKey(state, "wood"), shared.GetInt(state, LocalDotKey(state, "wood"))-250)
-
-				shared.LogEvent(state, "The player built a boat.")
-
-				TimePasses(state, 60)
-			},
-		},
-		"fish": {
-			Name: "Go fishing",
-			Conditions: func(state *shared.GameState) bool {
-				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetBool(state, LocalDotKey(state, "boat"))
-			},
-			Action: func(state *shared.GameState) {
-				shared.ClearEventLogs(state)
-				lucky := rand.Intn(2) == 1
-				yield := 3
-				if lucky {
-					yield = 12
-				}
-
-				shared.PropedSet(state, LocalDotKey(state, "food"), shared.GetInt(state, LocalDotKey(state, "food"))+yield)
-
-				if SunLightLevel(state) > 6 && !shared.GetBool(state, "bottle_map") {
-					shared.StateSet(state, "bottle_map", true)
-					shared.LogEvent(state, "The player fishes out a map in a bottle!")
-					return
-				}
-
-				message := "The fishing trip was unlucky."
-				if lucky {
-					message = "The player caught a big fish."
-				}
-				shared.LogEvent(state, message)
-
-				TimePasses(state, 60)
-			},
-		},
-		"fire": {
-			Name: "Make fire (up to 10 wood)",
-			Conditions: func(state *shared.GameState) bool {
-				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetInt(state, LocalDotKey(state, "wood")) > 0
-			},
-			Action: func(state *shared.GameState) {
-				shared.ClearEventLogs(state)
-				fromScratch := shared.GetInt(state, LocalDotKey(state, "fire_minutes")) <= 0
-
-				currentWood := shared.GetInt(state, LocalDotKey(state, "wood"))
-				woodToBurn := currentWood
-				if woodToBurn > 10 {
-					woodToBurn = 10
-				}
-
-				if fromScratch {
-					if AddEnergy(state, -45, "Died making fire from scratch") {
-						return
-					}
-				}
-
-				burnMinutes := woodToBurn * 90
-				shared.PropedSet(state, LocalDotKey(state, "fire_minutes"), shared.GetInt(state, LocalDotKey(state, "fire_minutes"))+burnMinutes)
-				shared.PropedSet(state, LocalDotKey(state, "wood"), currentWood-woodToBurn)
-
-				message := "The player stokes the fire with more wood."
-				if fromScratch {
-					message = "The player rubs sticks together to make fire. It was exhausting and time consuming."
-				}
-				shared.LogEvent(state, message)
-
-				if fromScratch {
-					if TimePasses(state, 60) {
-						return
-					}
-				}
-			},
-		},
-		"follow_the_map": {
-			Name: "Follow the map the player fished out.",
-			Conditions: func(state *shared.GameState) bool {
-				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && shared.GetBool(state, "bottle_map")
-			},
-			Action: func(state *shared.GameState) {
-
-				food := shared.GetInt(state, LocalDotKey(state, "food"))
-				wood := shared.GetInt(state, LocalDotKey(state, "wood"))
-				fire := shared.GetInt(state, LocalDotKey(state, "fire_minutes"))
-
-				shared.PropedSet(state, LocalDotKey(state, "food"), food-10)
-				shared.PropedSet(state, LocalDotKey(state, "wood"), wood-10)
-				shared.PropedSet(state, LocalDotKey(state, "fire_minutes"), fire-60)
-
-				newLoc := "caves"
-				shared.StateSet(state, PlayerDotKey(state, "location"), newLoc)
-
-				shared.PropedSet(state, newLoc+".food", shared.GetInt(state, newLoc+".food")+food)
-				shared.PropedSet(state, newLoc+".wood", shared.GetInt(state, newLoc+".wood")+wood)
-				shared.PropedSet(state, newLoc+".fire_minutes", shared.GetInt(state, newLoc+".fire_minutes")+fire)
-
-				shared.LogEvent(state, "The player enters the caves with all the supplies they could carry.")
-			},
-		},
-		"sleep": {
-			Name: "Sleep 8 hours",
-			Conditions: func(state *shared.GameState) bool {
-				return slices.Contains(humanKeys(), shared.GetActingPlayer(state)) && SunLightLevel(state) <= 0
-			},
-			Action: func(state *shared.GameState) {
-				shared.ClearEventLogs(state)
-
-				shared.StateInvisibleSet(state, PlayerDotKey(state, "sleeping"), true)
-				hasFire := shared.GetInt(state, LocalDotKey(state, "fire_minutes")) > 0
-
-				shared.StateSet(state, PlayerDotKey(state, "sleeping"), nil)
-
-				message := "The player slept in the cold."
-				if hasFire {
-					message = "The player slept in warmth."
-				}
-				shared.LogEvent(state, message)
-
-				if TimePasses(state, 8*60) {
-					return
-				}
-			},
-		},
-		"wait": {
-			Name: "Wait 1 hour",
-			Conditions: func(state *shared.GameState) bool {
-				return slices.Contains(humanKeys(), shared.GetActingPlayer(state))
-			},
-			Action: func(state *shared.GameState) {
-				shared.ClearEventLogs(state)
-				shared.LogEvent(state, "shared.Player does nothing for 1 hour.")
-
-				if TimePasses(state, 60) {
-					return
-				}
-			},
-		},
-		"end_of_round": {
-			Name: "End of the round",
-			Conditions: func(state *shared.GameState) bool {
-				return shared.GetActingPlayer(state) == "round"
-			},
-			Action: func(state *shared.GameState) {
-				shared.ClearEventLogs(state)
-				shared.PropedSet(state, "round", shared.GetInt(state, "round")+1)
+				advanceTo(state, "main_quest", "inception")
+				shared.LogEvent(state, "You set out on your adventure. The road ahead is uncertain.")
 				shared.EndTurn(state)
-				shared.LogEvent(state, "End of the round.")
+			},
+		},
+		"recruit": {
+			Name: "Recruit heroes to aid your cause",
+			Conditions: func(state *shared.GameState) bool {
+				return notDefeated(state) &&
+					isAdvanced(state, "main_quest", "inception") &&
+					!isAdvanced(state, "main_quest", "gathering_allies")
+			},
+			Action: func(state *shared.GameState) {
+				shared.ClearEventLogs(state)
+				advanceTo(state, "main_quest", "gathering_allies")
+				shared.LogEvent(state, "Heroes rally to your banner. Your army grows stronger.")
+				shared.EndTurn(state)
+			},
+		},
+		"confront": {
+			Name: "Storm the villain's fortress",
+			Conditions: func(state *shared.GameState) bool {
+				return notDefeated(state) && ((isAdvanced(state, "main_quest", "gathering_allies") &&
+					!isAdvanced(state, "main_quest", "confronting_villain")) ||
+					isAdvanced(state, "main_quest_detail", "confronted_villain_without_artifact"))
+			},
+			Action: func(state *shared.GameState) {
+				shared.ClearEventLogs(state)
+				advanceTo(state, "main_quest", "confronting_villain")
+
+				secondMeetingMsg := `The villain says: "This time, I will finish you for good".`
+
+				if !isAdvanced(state, "side_quest", "artifact_recovered") {
+					if isAdvanced(state, "main_quest_detail", "confronted_villain_without_artifact") {
+						msg := "You storm the fortress. " + secondMeetingMsg +
+							" The fight is brutal and you lose. " +
+							"The villain's sword pierces your heart."
+						advanceTo(state, "main_quest_detail", "player_defeated")
+						shared.LogEvent(state, msg)
+						shared.StateSet(state, "status", "DEFEATED")
+					} else {
+						advanceTo(state, "main_quest_detail", "confronted_villain_without_artifact")
+						shared.LogEvent(state, "You storm the fortress. The fight is brutal and you lose. The villain lets you go, out of pity.")
+					}
+				} else {
+					victoryMsg := "The battle starts and with the help of your artifact, " +
+						"you strike the villain down! The world enters the era of peace."
+
+					var msg string
+					if isAdvanced(state, "main_quest_detail", "confronted_villain_without_artifact") {
+						msg = "With the artifact in hand, you storm the fortress. " +
+							secondMeetingMsg + " " + victoryMsg
+					} else {
+						msg = "With the artifact in hand, you storm the fortress. " + victoryMsg
+					}
+
+					advanceTo(state, "main_quest", "victory")
+					shared.LogEvent(state, msg)
+					shared.StateSet(state, "status", "VICTORY")
+				}
+
+				shared.EndTurn(state)
+			},
+		},
+		"rumor": {
+			Name: "Listen to whispers at the tavern",
+			Conditions: func(state *shared.GameState) bool {
+				return notDefeated(state) && !isAdvanced(state, "side_quest", "rumor_heard")
+			},
+			Action: func(state *shared.GameState) {
+				shared.ClearEventLogs(state)
+				advanceTo(state, "side_quest", "rumor_heard")
+				shared.LogEvent(state, "You overhear a tavern whisper about a lost artifact.")
+				shared.EndTurn(state)
+			},
+		},
+		"clue": {
+			Name: "Explore the ancient ruins for hidden lore",
+			Conditions: func(state *shared.GameState) bool {
+				return notDefeated(state) &&
+					isAdvanced(state, "side_quest", "rumor_heard") &&
+					!isAdvanced(state, "side_quest", "clue_found")
+			},
+			Action: func(state *shared.GameState) {
+				shared.ClearEventLogs(state)
+				advanceTo(state, "side_quest", "clue_found")
+				shared.LogEvent(state, "Hidden among the ruins, you find an ancient map leading to the artifact.")
+				shared.EndTurn(state)
+			},
+		},
+		"artifact": {
+			Name: "Claim the legendary artifact as your own",
+			Conditions: func(state *shared.GameState) bool {
+				return notDefeated(state) &&
+					isAdvanced(state, "side_quest", "clue_found") &&
+					isAdvanced(state, "main_quest", "gathering_allies") &&
+					!isAdvanced(state, "side_quest", "artifact_recovered")
+			},
+			Action: func(state *shared.GameState) {
+				shared.ClearEventLogs(state)
+				advanceTo(state, "side_quest", "artifact_recovered")
+				shared.LogEvent(state, "You claim the legendary artifact. Its power hums in your hands.")
+				shared.EndTurn(state)
 			},
 		},
 	}
 }
+
+// ---------------------------------------------------------------------------
+// WASM exports
+// ---------------------------------------------------------------------------
 
 //go:wasmexport InitMarshaledState
 func InitMarshaledState() uint64 {
