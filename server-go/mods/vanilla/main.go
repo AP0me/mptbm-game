@@ -110,13 +110,11 @@ func InitState() *shared.GameState {
 				"status",
 				"acting_player",
 				"player_order",
-				"date_time",
 			},
 			"status":        "RUNNING",
 			"event_logs":    []string{},
 			"acting_player": "anar",
 			"player_order":  humanKeys(),
-			"date_time":     "2026-08-13 12:00:00",
 			"tree": map[string]any{
 				"branches.main_quest":        []string{"inception", "gathering_allies", "confronting_villain", "victory"},
 				"branches.main_quest_detail": []string{"confronted_villain_without_artifact", "player_defeated"},
