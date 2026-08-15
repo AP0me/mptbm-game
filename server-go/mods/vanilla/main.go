@@ -80,23 +80,20 @@ func indexOfChild(children []string, childKey string) int {
 	return -1
 }
 
-// isAdvanced matches Python: current_idx >= target_idx
-func isAdvanced(state *shared.GameState, layer1Key, childKey string) bool {
-	currentIdx := getSelection(state, layer1Key)
-	targetIdx := indexOfChild(getBranch(state, layer1Key), childKey)
-	return currentIdx >= targetIdx
-}
-
 // advanceTo matches Python DirectedTree.advance_to: never moves backwards.
 func advanceTo(state *shared.GameState, layer1Key, childKey string) {
-	if !isAdvanced(state, layer1Key, childKey) {
+	hasBeenAdvanced := isAdvanced(
+		state,
+		advNot(advIs("main_quest", "inception")),
+	)
+	if hasBeenAdvanced {
 		setSelection(state, layer1Key, indexOfChild(getBranch(state, layer1Key), childKey))
 	}
 }
 
 // notDefeated mirrors PlayerNotDefeatedOption.check_condition.
 func notDefeated(state *shared.GameState) bool {
-	return !isAdvanced(state, "main_quest_detail", "player_defeated")
+	return !isAdvanced(state, advIs("main_quest_detail", "player_defeated"))
 }
 
 // ---------------------------------------------------------------------------
@@ -146,12 +143,21 @@ func InitDeck() map[string]*shared.Card {
 		"begin_adventure": {
 			Name: "Begin the adventure",
 			Conditions: func(state *shared.GameState) bool {
-				return notDefeated(state) && !isAdvanced(state, "main_quest", "inception")
+				return notDefeated(state) &&
+					isAdvanced(
+						state,
+						advNot(
+							advIs("main_quest", "inception"),
+						),
+					)
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
 				advanceTo(state, "main_quest", "inception")
-				shared.LogEvent(state, "You set out on your adventure. The road ahead is uncertain.")
+				shared.LogEvent(
+					state,
+					"You set out on your adventure. The road ahead is uncertain.",
+				)
 				shared.EndTurn(state)
 			},
 		},
@@ -159,22 +165,45 @@ func InitDeck() map[string]*shared.Card {
 			Name: "Recruit heroes to aid your cause",
 			Conditions: func(state *shared.GameState) bool {
 				return notDefeated(state) &&
-					isAdvanced(state, "main_quest", "inception") &&
-					!isAdvanced(state, "main_quest", "gathering_allies")
+					isAdvanced(
+						state,
+						advAnd(
+							advIs("main_quest", "inception"),
+							advNot(
+								advIs("main_quest", "gathering_allies"),
+							),
+						),
+					)
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
 				advanceTo(state, "main_quest", "gathering_allies")
-				shared.LogEvent(state, "Heroes rally to your banner. Your army grows stronger.")
+				shared.LogEvent(
+					state,
+					"Heroes rally to your banner. Your army grows stronger.",
+				)
 				shared.EndTurn(state)
 			},
 		},
 		"confront": {
 			Name: "Storm the villain's fortress",
 			Conditions: func(state *shared.GameState) bool {
-				return notDefeated(state) && ((isAdvanced(state, "main_quest", "gathering_allies") &&
-					!isAdvanced(state, "main_quest", "confronting_villain")) ||
-					isAdvanced(state, "main_quest_detail", "confronted_villain_without_artifact"))
+				return notDefeated(state) &&
+					isAdvanced(
+						state,
+						advOr(
+							advAnd(
+								advIs("main_quest", "gathering_allies"),
+								advNot(
+									advIs("main_quest", "confronting_villain"),
+								),
+							),
+							advIs(
+								"main_quest_detail",
+								"confronted_villain_without_artifact",
+							),
+						),
+					)
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
@@ -182,28 +211,55 @@ func InitDeck() map[string]*shared.Card {
 
 				secondMeetingMsg := `The villain says: "This time, I will finish you for good".`
 
-				if !isAdvanced(state, "side_quest", "artifact_recovered") {
-					if isAdvanced(state, "main_quest_detail", "confronted_villain_without_artifact") {
+				if isAdvanced(
+					state,
+					advNot(
+						advIs("side_quest", "artifact_recovered"),
+					),
+				) {
+					if isAdvanced(
+						state,
+						advIs(
+							"main_quest_detail",
+							"confronted_villain_without_artifact",
+						),
+					) {
 						msg := "You storm the fortress. " + secondMeetingMsg +
 							" The fight is brutal and you lose. " +
 							"The villain's sword pierces your heart."
+
 						advanceTo(state, "main_quest_detail", "player_defeated")
 						shared.LogEvent(state, msg)
 						shared.StateSet(state, "status", "DEFEATED")
 					} else {
-						advanceTo(state, "main_quest_detail", "confronted_villain_without_artifact")
-						shared.LogEvent(state, "You storm the fortress. The fight is brutal and you lose. The villain lets you go, out of pity.")
+						advanceTo(
+							state,
+							"main_quest_detail",
+							"confronted_villain_without_artifact",
+						)
+						shared.LogEvent(
+							state,
+							"You storm the fortress. The fight is brutal and you lose. The villain lets you go, out of pity.",
+						)
 					}
 				} else {
 					victoryMsg := "The battle starts and with the help of your artifact, " +
 						"you strike the villain down! The world enters the era of peace."
 
 					var msg string
-					if isAdvanced(state, "main_quest_detail", "confronted_villain_without_artifact") {
+
+					if isAdvanced(
+						state,
+						advIs(
+							"main_quest_detail",
+							"confronted_villain_without_artifact",
+						),
+					) {
 						msg = "With the artifact in hand, you storm the fortress. " +
 							secondMeetingMsg + " " + victoryMsg
 					} else {
-						msg = "With the artifact in hand, you storm the fortress. " + victoryMsg
+						msg = "With the artifact in hand, you storm the fortress. " +
+							victoryMsg
 					}
 
 					advanceTo(state, "main_quest", "victory")
@@ -217,12 +273,21 @@ func InitDeck() map[string]*shared.Card {
 		"rumor": {
 			Name: "Listen to whispers at the tavern",
 			Conditions: func(state *shared.GameState) bool {
-				return notDefeated(state) && !isAdvanced(state, "side_quest", "rumor_heard")
+				return notDefeated(state) &&
+					isAdvanced(
+						state,
+						advNot(
+							advIs("side_quest", "rumor_heard"),
+						),
+					)
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
 				advanceTo(state, "side_quest", "rumor_heard")
-				shared.LogEvent(state, "You overhear a tavern whisper about a lost artifact.")
+				shared.LogEvent(
+					state,
+					"You overhear a tavern whisper about a lost artifact.",
+				)
 				shared.EndTurn(state)
 			},
 		},
@@ -230,13 +295,23 @@ func InitDeck() map[string]*shared.Card {
 			Name: "Explore the ancient ruins for hidden lore",
 			Conditions: func(state *shared.GameState) bool {
 				return notDefeated(state) &&
-					isAdvanced(state, "side_quest", "rumor_heard") &&
-					!isAdvanced(state, "side_quest", "clue_found")
+					isAdvanced(
+						state,
+						advAnd(
+							advIs("side_quest", "rumor_heard"),
+							advNot(
+								advIs("side_quest", "clue_found"),
+							),
+						),
+					)
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
 				advanceTo(state, "side_quest", "clue_found")
-				shared.LogEvent(state, "Hidden among the ruins, you find an ancient map leading to the artifact.")
+				shared.LogEvent(
+					state,
+					"Hidden among the ruins, you find an ancient map leading to the artifact.",
+				)
 				shared.EndTurn(state)
 			},
 		},
@@ -244,14 +319,24 @@ func InitDeck() map[string]*shared.Card {
 			Name: "Claim the legendary artifact as your own",
 			Conditions: func(state *shared.GameState) bool {
 				return notDefeated(state) &&
-					isAdvanced(state, "side_quest", "clue_found") &&
-					isAdvanced(state, "main_quest", "gathering_allies") &&
-					!isAdvanced(state, "side_quest", "artifact_recovered")
+					isAdvanced(
+						state,
+						advAnd(
+							advIs("side_quest", "clue_found"),
+							advIs("main_quest", "gathering_allies"),
+							advNot(
+								advIs("side_quest", "artifact_recovered"),
+							),
+						),
+					)
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
 				advanceTo(state, "side_quest", "artifact_recovered")
-				shared.LogEvent(state, "You claim the legendary artifact. Its power hums in your hands.")
+				shared.LogEvent(
+					state,
+					"You claim the legendary artifact. Its power hums in your hands.",
+				)
 				shared.EndTurn(state)
 			},
 		},
