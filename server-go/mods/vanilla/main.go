@@ -3,8 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"game/server/mods/shared"
 	"unsafe"
+
+	"game/server/mods/shared"
 )
 
 func humanKeys() []string {
@@ -81,12 +82,12 @@ func indexOfChild(children []string, childKey string) int {
 }
 
 // advanceTo matches Python DirectedTree.advance_to: never moves backwards.
-func advanceTo(state *shared.GameState, layer1Key, childKey string) {
-	hasBeenAdvanced := isAdvanced(
+func advanceTo(state *shared.GameState, layer1Key string, childKey string) {
+	hasNotBeenAdvanced := isAdvanced(
 		state,
-		advNot(advIs("main_quest", "inception")),
+		advNot(advIs(layer1Key, childKey)),
 	)
-	if hasBeenAdvanced {
+	if hasNotBeenAdvanced {
 		setSelection(state, layer1Key, indexOfChild(getBranch(state, layer1Key), childKey))
 	}
 }
@@ -113,9 +114,9 @@ func InitState() *shared.GameState {
 			"acting_player": "anar",
 			"player_order":  humanKeys(),
 			"tree": map[string]any{
-				"branches.main_quest":        []string{"inception", "gathering_allies", "confronting_villain", "victory"},
-				"branches.main_quest_detail": []string{"confronted_villain_without_artifact", "player_defeated"},
-				"branches.side_quest":        []string{"rumor_heard", "clue_found", "artifact_recovered"},
+				"branches.main_quest":          []string{"gathering_allies", "confronting_villain", "victory"},
+				"branches.main_quest_detail":   []string{"confronted_villain_without_artifact", "player_defeated"},
+				"branches.side_quest":          []string{"rumor_heard", "clue_found", "artifact_recovered"},
 				"selections.main_quest":        -1,
 				"selections.main_quest_detail": -1,
 				"selections.side_quest":        -1,
@@ -129,6 +130,10 @@ func InitRobots() map[string]*shared.Player {
 	return map[string]*shared.Player{}
 }
 
+func playerNotDefeated() AdvancedExpression {
+	return advNot(advIs("main_quest_detail", "player_defeated"))
+}
+
 func InitDeck() map[string]*shared.Card {
 	return map[string]*shared.Card{
 		"skip": {
@@ -140,40 +145,18 @@ func InitDeck() map[string]*shared.Card {
 				shared.LogEvent(state, "The hero pauses for a moment.")
 			},
 		},
-		"begin_adventure": {
-			Name: "Begin the adventure",
-			Conditions: func(state *shared.GameState) bool {
-				return notDefeated(state) &&
-					isAdvanced(
-						state,
-						advNot(
-							advIs("main_quest", "inception"),
-						),
-					)
-			},
-			Action: func(state *shared.GameState) {
-				shared.ClearEventLogs(state)
-				advanceTo(state, "main_quest", "inception")
-				shared.LogEvent(
-					state,
-					"You set out on your adventure. The road ahead is uncertain.",
-				)
-				shared.EndTurn(state)
-			},
-		},
 		"recruit": {
 			Name: "Recruit heroes to aid your cause",
 			Conditions: func(state *shared.GameState) bool {
-				return notDefeated(state) &&
-					isAdvanced(
-						state,
-						advAnd(
-							advIs("main_quest", "inception"),
-							advNot(
-								advIs("main_quest", "gathering_allies"),
-							),
+				return isAdvanced(
+					state,
+					advAnd(
+						playerNotDefeated(),
+						advNot(
+							advIs("main_quest", "gathering_allies"),
 						),
-					)
+					),
+				)
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
@@ -188,9 +171,10 @@ func InitDeck() map[string]*shared.Card {
 		"confront": {
 			Name: "Storm the villain's fortress",
 			Conditions: func(state *shared.GameState) bool {
-				return notDefeated(state) &&
-					isAdvanced(
-						state,
+				return isAdvanced(
+					state,
+					advAnd(
+						playerNotDefeated(),
 						advOr(
 							advAnd(
 								advIs("main_quest", "gathering_allies"),
@@ -203,7 +187,8 @@ func InitDeck() map[string]*shared.Card {
 								"confronted_villain_without_artifact",
 							),
 						),
-					)
+					),
+				)
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
@@ -273,13 +258,15 @@ func InitDeck() map[string]*shared.Card {
 		"rumor": {
 			Name: "Listen to whispers at the tavern",
 			Conditions: func(state *shared.GameState) bool {
-				return notDefeated(state) &&
-					isAdvanced(
-						state,
+				return isAdvanced(
+					state,
+					advAnd(
+						playerNotDefeated(),
 						advNot(
 							advIs("side_quest", "rumor_heard"),
 						),
-					)
+					),
+				)
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
@@ -298,6 +285,7 @@ func InitDeck() map[string]*shared.Card {
 					isAdvanced(
 						state,
 						advAnd(
+							playerNotDefeated(),
 							advIs("side_quest", "rumor_heard"),
 							advNot(
 								advIs("side_quest", "clue_found"),
@@ -318,17 +306,17 @@ func InitDeck() map[string]*shared.Card {
 		"artifact": {
 			Name: "Claim the legendary artifact as your own",
 			Conditions: func(state *shared.GameState) bool {
-				return notDefeated(state) &&
-					isAdvanced(
-						state,
-						advAnd(
-							advIs("side_quest", "clue_found"),
-							advIs("main_quest", "gathering_allies"),
-							advNot(
-								advIs("side_quest", "artifact_recovered"),
-							),
+				return isAdvanced(
+					state,
+					advAnd(
+						playerNotDefeated(),
+						advIs("side_quest", "clue_found"),
+						advIs("main_quest", "gathering_allies"),
+						advNot(
+							advIs("side_quest", "artifact_recovered"),
 						),
-					)
+					),
+				)
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
