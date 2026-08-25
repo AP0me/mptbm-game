@@ -3,9 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"unsafe"
-
 	"game/server/mods/shared"
+	"unsafe"
 )
 
 func humanKeys() []string {
@@ -114,9 +113,20 @@ func InitState() *shared.GameState {
 			"acting_player": "anar",
 			"player_order":  humanKeys(),
 			"tree": map[string]any{
-				"branches.main_quest":          []string{"gathering_allies", "confronting_villain", "victory"},
-				"branches.main_quest_detail":   []string{"confronted_villain_without_artifact", "player_defeated"},
-				"branches.side_quest":          []string{"rumor_heard", "clue_found", "artifact_recovered"},
+				"branches.main_quest": []string{
+					"gathering_allies",
+					"confronting_villain",
+					"victory",
+				},
+				"branches.main_quest_detail": []string{
+					"confronted_villain_without_artifact",
+					"player_defeated",
+				},
+				"branches.side_quest": []string{
+					"rumor_heard",
+					"clue_found",
+					"artifact_recovered",
+				},
 				"selections.main_quest":        -1,
 				"selections.main_quest_detail": -1,
 				"selections.side_quest":        -1,

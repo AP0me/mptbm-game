@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -439,5 +440,7 @@ func PrintCardResponse(messages []any) {
 		fmt.Print(Reset)
 
 		time.Sleep(time.Second)
+		fmt.Print("Press 'Enter' to continue...")
+		bufio.NewReader(os.Stdin).ReadBytes('\n')
 	}
 }
