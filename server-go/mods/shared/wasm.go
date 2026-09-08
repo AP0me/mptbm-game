@@ -156,7 +156,15 @@ func PlayCardAction(deck map[string]*Card, keyPtr uint32, keySize uint32, stateP
 	delete(activeAllocations, statePtr)
 
 	// 3. Execute the Action
-	if card, exists := deck[cardKey]; exists && card.Action != nil {
+	card, exists := deck[cardKey];
+	if !exists {
+		card, exists = deck["skip"];
+	}
+	if !exists {
+		return 0;
+	}
+
+	if card.Action != nil {
 		card.Action(&state)
 	}
 

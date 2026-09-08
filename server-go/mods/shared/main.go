@@ -155,7 +155,7 @@ func EndTurn(s *GameState) {
 			break
 		}
 	}
-	StateSet(s, "acting_player", order[nextIdx])
+	StateInvisibleSet(s, "acting_player", order[nextIdx])
 }
 
 func RobotKeys(robots map[string]*Player) []string {

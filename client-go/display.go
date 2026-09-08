@@ -248,23 +248,13 @@ func PrintState(state map[string]any) {
 		contentWidth = 1
 	}
 
+	if len(displayOrder) == 0 {
+		return
+	}
+
 	printBoxBorder(indent, Cyan, "╔", "═", "╗", width)
 	printBoxTitle(indent, Cyan, "~ GAME STATE ~", width)
 	printBoxBorder(indent, Cyan, "╠", "═", "╣", width)
-
-	if len(displayOrder) == 0 {
-		message := "No state values"
-		message = truncateRunes(message, contentWidth)
-
-		content := " " + Gray + Dim + message + Reset
-		printBoxLine(
-			indent,
-			Cyan,
-			content,
-			1+runeLength(message),
-			width,
-		)
-	}
 
 	for _, key := range displayOrder {
 		valueText := stateValueString(state[key])

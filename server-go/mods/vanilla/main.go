@@ -96,6 +96,21 @@ func notDefeated(state *shared.GameState) bool {
 	return !isAdvanced(state, advIs("main_quest_detail", "player_defeated"))
 }
 
+func setQuestState(state *shared.GameState, questBranch string, questState string) {
+	var stateAffectMap = map[string]any{
+		"gathering_allies": func(state *shared.GameState, questBranch string, questState string) {
+			advanceTo(state, questBranch, questState)
+			shared.LogEvent(state, "A new ally joins your band.")
+		},
+	}
+
+	if handler, exists := stateAffectMap[questState]; exists {
+		if fn, ok := handler.(func(*shared.GameState, string, string)); ok {
+			fn(state, questBranch, questState)
+		}
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Game setup
 // ---------------------------------------------------------------------------
@@ -104,9 +119,6 @@ func InitState() *shared.GameState {
 	return &shared.GameState{
 		Data: map[string]any{
 			"display_order": []string{
-				"status",
-				"acting_player",
-				"player_order",
 			},
 			"status":        "RUNNING",
 			"event_logs":    []string{},
@@ -170,12 +182,25 @@ func InitDeck() map[string]*shared.Card {
 			},
 			Action: func(state *shared.GameState) {
 				shared.ClearEventLogs(state)
-				advanceTo(state, "main_quest", "gathering_allies")
-				shared.LogEvent(
+				setQuestState(state, "main_quest", "gathering_allies")
+			},
+		},
+		"help": {
+			Name: "Help a person with their troubles",
+			Conditions: func(state *shared.GameState) bool {
+				return isAdvanced(
 					state,
-					"Heroes rally to your banner. Your army grows stronger.",
+					advAnd(
+						playerNotDefeated(),
+						advNot(
+							advIs("main_quest", "gathering_allies"),
+						),
+					),
 				)
-				shared.EndTurn(state)
+			},
+			Action: func(state *shared.GameState) {
+				shared.ClearEventLogs(state)
+				setQuestState(state, "main_quest", "gathering_allies")
 			},
 		},
 		"confront": {
